@@ -53,6 +53,16 @@
 
 * { box-sizing: border-box; }
 
+button,
+.wa-btn,
+.roster-item,
+.fx-side,
+.fx-center,
+.d-rival {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -696,6 +706,94 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 }
 
 .site-foot p { margin: 0; }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 620px) {
+  .layout { width: min(760px, 94vw); }
+
+  .site-head { padding: 34px 0 20px; }
+  .site-head h1 { font-size: clamp(2rem, 8.5vw, 2.8rem); }
+  .site-head h1::after { margin-top: 10px; }
+  .site-head .sub { margin: 10px 0 16px; }
+
+  .section { margin-top: 28px; }
+
+  /* Partidos: se apilan en vertical */
+  .fixture { grid-template-columns: 1fr; }
+
+  .fx-side,
+  .fx-side.right {
+    position: relative;
+    align-items: flex-start;
+    text-align: left;
+    padding: 12px 44px 12px 15px;
+  }
+
+  .fx-side .status-dot {
+    position: absolute;
+    top: 15px;
+    right: 16px;
+    margin: 0;
+  }
+
+  .fx-center {
+    flex-direction: row;
+    justify-content: center;
+    align-items: baseline;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 15px;
+    border-left: 0;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--card-2);
+  }
+
+  .fx-vs { font-size: .95rem; }
+  .fx-info::before { content: "·\00a0"; color: var(--ink-soft); font-weight: 400; }
+
+  /* Lista: el @handle estorba en pantallas estrechas */
+  .roster-handle { display: none; }
+  .roster-item:hover { padding-left: 15px; }
+  .roster-item:hover::before { transform: scaleY(0); }
+
+  /* Resultado del partido: sin nombres laterales, cajas más grandes */
+  .m-score-row { grid-template-columns: auto 1fr auto 1fr; }
+  .m-score-team { display: none; }
+  .m-score input { padding: 11px 4px; font-size: 17px; }
+  .m-score-label { justify-self: start; }
+
+  /* Recordatorios: uno debajo del otro */
+  .m-remind-label + .d-actions { flex-direction: column; }
+
+  .d-team,
+  .m-title { font-size: 1.75rem; }
+}
+
+@media (max-width: 380px) {
+  .fx-center { flex-wrap: wrap; row-gap: 2px; }
+  .d-box { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Puntero grueso (táctil): el :hover se queda "pegado" tras tocar, lo neutralizamos */
+@media (hover: none) {
+  .fixture:hover { transform: none; box-shadow: var(--shadow); border-color: var(--line); }
+  .fx-side:hover,
+  .fx-center:hover { background: transparent; }
+  .roster-item:hover { background: transparent; padding-left: 15px; }
+  .roster-item:hover::before { transform: scaleY(0); }
+  .d-rival:hover { transform: none; box-shadow: none; border-color: var(--line-strong); }
+  .d-close:hover,
+  .m-close:hover { transform: none; background: var(--bg); }
+  .save-btn:hover,
+  .m-save:hover { transform: none; background: transparent; }
+  .wa-btn:hover { transform: none; filter: none; }
+  .fx-side:active,
+  .fx-center:active,
+  .roster-item:active { background: var(--blood-tint); }
+}
 
 /* ---------- Accesibilidad: menos movimiento ---------- */
 @media (prefers-reduced-motion: reduce) {
