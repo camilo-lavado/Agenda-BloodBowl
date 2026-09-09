@@ -62,10 +62,21 @@ El resultado de `npm run build` es HTML estático en `dist/`. Sirve en cualquier
 ## Uso
 
 - Escribe en **Quién es** el nombre de la persona y en **WhatsApp** el número
-  con código de país y sin `+` ni espacios (ej. `34600123456`, `56912345678`).
-- Pulsa **Guardar**. Queda guardado para todos.
-- El botón verde **WhatsApp** abre el chat con un mensaje preescrito para cuadrar el partido.
-- Cada tarjeta muestra el **rival de la ronda** para saber a quién escribir.
+  (Chile: solo `9 1234 5678`, se añade el 56; otro país: número completo con código, sin `+`).
+- Pulsa **Guardar**. Queda guardado para todos. También hay **Copiar número** y **Copiar enlace** (a la ficha).
+- El botón verde **WhatsApp** abre el chat con un mensaje preescrito.
+- **Soy…**: elige tu coach (se recuerda solo en tu móvil) y se fija arriba tu partido de la ronda con botón directo al rival.
+- **Centro de cada partido**: fija día/hora, resultado (TD + bajas) y envía recordatorios por WhatsApp.
+- La **clasificación** se calcula sola con los resultados (V 3 / E 1 / D 0; desempate por TD±, bajas±).
+- El buscador muestra los resultados en un panel bajo el campo.
+
+## PWA (instalable)
+
+La web es instalable en el móvil (Añadir a pantalla de inicio) y funciona sin
+conexión para lo ya visto. El *service worker* solo se activa en producción
+(`dist/`), no en `npm run dev`. Tras cada despliegue puede hacer falta un
+refresco para ver los cambios; el `CACHE` en [`public/sw.js`](public/sw.js) se
+puede subir de versión (`tb6-v2`, …) para forzar la limpieza.
 
 ## Cambiar de ronda
 
@@ -77,11 +88,16 @@ Vuelve a desplegar. Los contactos guardados no se tocan.
 
 ```
 src/
-  data/coaches.ts      semilla fija de equipos y coaches
-  data/schedule.ts     emparejamientos de la ronda actual
-  components/CoachCard.astro
-  layouts/Base.astro
-  pages/index.astro    página + lógica de Supabase (cliente)
+  data/coaches.ts       semilla fija de equipos y coaches
+  data/schedule.ts      emparejamientos + clave de la ronda actual
+  layouts/Base.astro    <head>, PWA, registro del service worker
+  pages/index.astro     página + lógica de Supabase (cliente)
   styles/global.css
-supabase/schema.sql    script de creación + semilla
+public/
+  manifest.webmanifest  metadatos de la PWA
+  sw.js                 service worker (offline básico)
+  icon.svg / icon-maskable.svg
+supabase/
+  schema.sql            tabla coaches + semilla
+  matches.sql           tabla matches (día/hora + resultado)
 ```

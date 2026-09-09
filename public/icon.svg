@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="104" fill="#15110d"/>
+  <path d="M256 74c68 92 118 152 118 220a118 118 0 0 1-236 0c0-68 50-128 118-220z" fill="#a72828"/>
+  <path d="M256 74c68 92 118 152 118 220a118 118 0 0 1-236 0c0-68 50-128 118-220z" fill="none" stroke="#d8a85a" stroke-width="10" stroke-opacity=".5"/>
+  <text x="256" y="342" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="700" fill="#f3ead4" text-anchor="middle">TB</text>
+</svg>

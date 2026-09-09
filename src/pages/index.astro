@@ -43,6 +43,32 @@ const fixtures = currentRound.map(([a, b]) => {
       <p id="status" class="banner" hidden></p>
     </header>
 
+    <div class="toolbar">
+      <label class="me-pick">
+        <span>Soy</span>
+        <select id="me-select" aria-label="Elige tu coach">
+          <option value="">— elige tu coach —</option>
+          {roster.map((c) => (
+            <option value={c.id}>{c.fumbbl_coach} · {c.team_name}</option>
+          ))}
+        </select>
+      </label>
+      <div class="progress" id="progress">
+        <div class="progress-track"><span class="progress-fill" id="progress-fill"></span></div>
+        <span class="progress-text" id="progress-text">— / {roster.length} con WhatsApp</span>
+      </div>
+    </div>
+
+    <section class="mi-partido" id="mi-partido" hidden>
+      <p class="mp-eyebrow">Tu partido · {currentRoundLabel}</p>
+      <p class="mp-teams"></p>
+      <p class="mp-status"></p>
+      <div class="mp-actions">
+        <a class="wa-btn mp-wa disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer">Escribir al rival</a>
+        <button class="save-btn mp-open" type="button">Ver partido</button>
+      </div>
+    </section>
+
     <section class="section" id="sec-results" hidden>
       <h2>Resultados <span class="count" id="results-count"></span></h2>
       <ul class="roster" id="results-list"></ul>
@@ -76,6 +102,27 @@ const fixtures = currentRound.map(([a, b]) => {
           </div>
         ))}
       </div>
+    </section>
+
+    <section class="section" id="sec-standings">
+      <h2>Clasificación <span class="count" id="standings-count"></span></h2>
+      <div class="table-wrap">
+        <table class="standings">
+          <thead>
+            <tr>
+              <th class="c-pos">#</th>
+              <th class="c-team">Equipo</th>
+              <th>PJ</th>
+              <th class="c-gep">G-E-P</th>
+              <th>TD</th>
+              <th class="c-cas">Bajas</th>
+              <th class="c-pts">Pts</th>
+            </tr>
+          </thead>
+          <tbody id="standings-body"></tbody>
+        </table>
+      </div>
+      <p class="results-empty" id="standings-empty">Aún no hay resultados registrados.</p>
     </section>
 
     <section class="section" id="sec-roster">
@@ -138,6 +185,10 @@ const fixtures = currentRound.map(([a, b]) => {
       <div class="d-actions">
         <button class="save-btn" type="button">Guardar</button>
         <a class="wa-btn disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
+      </div>
+      <div class="d-links">
+        <button class="linkbtn copy-num" type="button">Copiar número</button>
+        <button class="linkbtn copy-link" type="button">Copiar enlace</button>
       </div>
       <div class="d-foot">
         <span class="updated"></span>
@@ -254,6 +305,11 @@ const fixtures = currentRound.map(([a, b]) => {
   }
   interface MatchRow {
     id: string;
+    round?: string | null;
+    home_id?: string | null;
+    away_id?: string | null;
+    home_team?: string | null;
+    away_team?: string | null;
     scheduled_at: string | null;
     td_home: number | null;
     td_away: number | null;
@@ -270,6 +326,23 @@ const fixtures = currentRound.map(([a, b]) => {
   const fmap = new Map(FIXTURES.map((fx) => [fx.id, fx]));
   const state = new Map<string, Row>();
   const mstate = new Map<string, MatchRow>();
+
+  // "Soy" — se recuerda solo en este dispositivo
+  const ME_KEY = 'tb6_me';
+  function getMe(): string {
+    try {
+      return localStorage.getItem(ME_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+  function saveMe(v: string) {
+    try {
+      if (v) localStorage.setItem(ME_KEY, v);
+      else localStorage.removeItem(ME_KEY);
+    } catch {}
+  }
+  let me = getMe();
 
   const banner = document.getElementById('status') as HTMLParagraphElement;
   if (!supabase) {
@@ -336,13 +409,201 @@ const fixtures = currentRound.map(([a, b]) => {
         const r = state.get(id);
         nameEl.textContent = r?.real_name || cmap.get(id)!.fumbbl_coach;
       }
+      el.classList.toggle('is-me', !!me && id === me);
     });
+    paintProgress();
+  }
+
+  function paintProgress() {
+    const total = COACHES.length;
+    const withWa = COACHES.filter((c) => state.get(c.id)?.whatsapp).length;
+    const fill = document.getElementById('progress-fill');
+    const text = document.getElementById('progress-text');
+    if (fill) {
+      fill.style.width = `${total ? (withWa / total) * 100 : 0}%`;
+      fill.classList.toggle('full', withWa === total && total > 0);
+    }
+    if (text) text.textContent = `${withWa} / ${total} con WhatsApp`;
+  }
+
+  function coachLabel(id: string): string {
+    const c = cmap.get(id);
+    if (!c) return id;
+    return state.get(id)?.real_name || c.fumbbl_coach;
+  }
+
+  // -------- Clasificación --------
+  function renderStandings() {
+    const body = document.getElementById('standings-body');
+    const empty = document.getElementById('standings-empty');
+    const count = document.getElementById('standings-count');
+    if (!body) return;
+
+    type S = {
+      id: string; pj: number; g: number; e: number; p: number;
+      tdf: number; tdc: number; casf: number; casc: number; pts: number;
+    };
+    const T = new Map<string, S>();
+    const ensure = (id: string) => {
+      let s = T.get(id);
+      if (!s) {
+        s = { id, pj: 0, g: 0, e: 0, p: 0, tdf: 0, tdc: 0, casf: 0, casc: 0, pts: 0 };
+        T.set(id, s);
+      }
+      return s;
+    };
+
+    for (const m of mstate.values()) {
+      if (m.td_home == null && m.td_away == null) continue;
+      if (!m.home_id || !m.away_id) continue;
+      const th = m.td_home ?? 0;
+      const ta = m.td_away ?? 0;
+      const ch = m.cas_home ?? 0;
+      const ca = m.cas_away ?? 0;
+      const H = ensure(m.home_id);
+      const A = ensure(m.away_id);
+      H.pj++; A.pj++;
+      H.tdf += th; H.tdc += ta; A.tdf += ta; A.tdc += th;
+      H.casf += ch; H.casc += ca; A.casf += ca; A.casc += ch;
+      if (th > ta) { H.g++; A.p++; H.pts += 3; }
+      else if (ta > th) { A.g++; H.p++; A.pts += 3; }
+      else { H.e++; A.e++; H.pts++; A.pts++; }
+    }
+
+    const rows = [...T.values()]
+      .map((s) => ({ ...s, tdd: s.tdf - s.tdc, casd: s.casf - s.casc }))
+      .sort(
+        (a, b) =>
+          b.pts - a.pts ||
+          b.tdd - a.tdd ||
+          b.casd - a.casd ||
+          b.tdf - a.tdf ||
+          (cmap.get(a.id)?.team_name ?? '').localeCompare(
+            cmap.get(b.id)?.team_name ?? '',
+            'es',
+          ),
+      );
+
+    if (count) count.textContent = rows.length ? String(rows.length) : '';
+    if (empty) empty.hidden = rows.length > 0;
+
+    const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
+    body.innerHTML = rows
+      .map((s, i) => {
+        const c = cmap.get(s.id)!;
+        return (
+          `<tr data-open="${esc(s.id)}"${s.id === me ? ' class="is-me"' : ''}>` +
+          `<td class="c-pos">${i + 1}</td>` +
+          `<td class="c-team"><span class="st-team">${esc(c.team_name)}</span>` +
+          `<span class="st-coach">@${esc(c.fumbbl_coach)}</span></td>` +
+          `<td>${s.pj}</td>` +
+          `<td class="c-gep">${s.g}-${s.e}-${s.p}</td>` +
+          `<td>${sign(s.tdd)}</td>` +
+          `<td class="c-cas">${sign(s.casd)}</td>` +
+          `<td class="c-pts">${s.pts}</td>` +
+          `</tr>`
+        );
+      })
+      .join('');
+  }
+
+  // -------- "Soy" / Tu partido --------
+  function renderMe() {
+    const sel = document.getElementById('me-select') as HTMLSelectElement | null;
+    if (sel && sel.value !== me) sel.value = me;
+    // refrescar etiquetas del selector con el nombre real si se conoce
+    sel?.querySelectorAll('option').forEach((opt) => {
+      if (!opt.value) return;
+      const c = cmap.get(opt.value);
+      if (c) opt.textContent = `${coachLabel(opt.value)} · ${c.team_name}`;
+    });
+    document.body.classList.toggle('has-me', !!me);
+    renderMyMatch();
+    paintList();
+  }
+
+  function renderMyMatch() {
+    const host = document.getElementById('mi-partido') as HTMLElement;
+    if (!host) return;
+    const fx = me
+      ? FIXTURES.find((f) => f.home_id === me || f.away_id === me)
+      : undefined;
+    if (!fx || document.getElementById('sec-results')?.hidden === false) {
+      host.hidden = true;
+      return;
+    }
+    const iAmHome = fx.home_id === me;
+    const myTeam = iAmHome ? fx.home_team : fx.away_team;
+    const rivalId = iAmHome ? fx.away_id : fx.home_id;
+    const rivalTeam = iAmHome ? fx.away_team : fx.home_team;
+    const rivalRec = state.get(rivalId);
+    const mrow = mstate.get(fx.id);
+
+    let status = 'Sin agendar';
+    if (mrow && (mrow.td_home != null || mrow.td_away != null)) {
+      status = `Jugado · ${mrow.td_home ?? 0}–${mrow.td_away ?? 0}`;
+    } else if (mrow?.scheduled_at) {
+      status = 'Agendado · ' + fmtDateTime(mrow.scheduled_at);
+    }
+
+    host.querySelector<HTMLElement>('.mp-teams')!.textContent = `${myTeam}  vs  ${rivalTeam}`;
+    host.querySelector<HTMLElement>('.mp-status')!.textContent = status;
+
+    const wa = host.querySelector<HTMLAnchorElement>('.mp-wa')!;
+    const rivalName = coachLabel(rivalId);
+    const link = rivalRec?.whatsapp
+      ? waHref(
+          rivalRec.whatsapp,
+          `¡Hola ${rivalName}! Soy de ${myTeam}. Nos toca en ${ROUND} de Tasting Blood VI, ¿cuándo jugamos?`,
+        )
+      : null;
+    wa.textContent = `Escribir a ${rivalName}`;
+    if (link) {
+      wa.href = link;
+      wa.classList.remove('disabled');
+      wa.setAttribute('aria-disabled', 'false');
+    } else {
+      wa.removeAttribute('href');
+      wa.classList.add('disabled');
+      wa.setAttribute('aria-disabled', 'true');
+    }
+    host.querySelector<HTMLButtonElement>('.mp-open')!.onclick = () => openMatch(fx.id);
+    host.hidden = false;
   }
 
   function esc(s: unknown): string {
     return String(s ?? '').replace(/[&<>"']/g, (m) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]!),
     );
+  }
+
+  // Enlace directo a una ficha vía #hash (sin ensuciar el historial)
+  function setHash(id: string) {
+    try {
+      history.replaceState(null, '', '#' + encodeURIComponent(id));
+    } catch {}
+  }
+  function clearHash() {
+    if (!location.hash) return;
+    try {
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch {
+      try {
+        location.hash = '';
+      } catch {}
+    }
+  }
+
+  // Cambia el texto de un botón un momento para dar feedback
+  function flash(btn: HTMLElement, txt: string) {
+    const prev = btn.dataset.label ?? btn.textContent ?? '';
+    btn.dataset.label = prev;
+    btn.textContent = txt;
+    btn.classList.add('flashed');
+    window.setTimeout(() => {
+      btn.textContent = btn.dataset.label ?? prev;
+      btn.classList.remove('flashed');
+    }, 1600);
   }
 
   function updateRoundStatus(pending: number, total: number) {
@@ -392,6 +653,8 @@ const fixtures = currentRound.map(([a, b]) => {
       }
     });
     updateRoundStatus(pending, rows.length);
+    renderStandings();
+    renderMyMatch();
   }
   updateRoundStatus(document.querySelectorAll('.fixture').length, document.querySelectorAll('.fixture').length);
 
@@ -468,6 +731,7 @@ const fixtures = currentRound.map(([a, b]) => {
     refreshWa();
     if (dlgMatch.open) dlgMatch.close();
     if (!dlg.open) dlg.showModal();
+    setHash(id);
   }
 
   f.realname.addEventListener('input', refreshWa);
@@ -475,6 +739,29 @@ const fixtures = currentRound.map(([a, b]) => {
   f.rival.addEventListener('click', () => {
     const rid = f.rival.dataset.rival;
     if (rid) openDetail(rid);
+  });
+
+  q<HTMLButtonElement>('.copy-num').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLElement;
+    const n = normalize(f.whatsapp.value);
+    if (!n) return flash(btn, 'Sin número');
+    try {
+      await navigator.clipboard.writeText('+' + n);
+      flash(btn, 'Copiado ✓');
+    } catch {
+      flash(btn, 'No se pudo');
+    }
+  });
+  q<HTMLButtonElement>('.copy-link').addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLElement;
+    if (!currentId) return;
+    const url = location.origin + location.pathname + '#' + encodeURIComponent(currentId);
+    try {
+      await navigator.clipboard.writeText(url);
+      flash(btn, 'Enlace copiado ✓');
+    } catch {
+      flash(btn, 'No se pudo');
+    }
   });
 
   f.save.addEventListener('click', async () => {
@@ -512,12 +799,14 @@ const fixtures = currentRound.map(([a, b]) => {
     f.st.className = 'card-status ok';
     f.updated.textContent = 'Actualizado ahora';
     paintList();
+    renderMyMatch();
     window.setTimeout(() => {
       f.st.textContent = '';
       f.st.className = 'card-status';
     }, 2500);
   });
 
+  dlg.addEventListener('close', clearHash);
   q<HTMLButtonElement>('.d-close').addEventListener('click', () => dlg.close());
   dlg.addEventListener('click', (e) => {
     if (e.target === dlg) dlg.close();
@@ -609,8 +898,10 @@ const fixtures = currentRound.map(([a, b]) => {
     refreshReminders();
     if (dlg.open) dlg.close();
     if (!dlgMatch.open) dlgMatch.showModal();
+    setHash(fixtureId);
   }
 
+  dlgMatch.addEventListener('close', clearHash);
   m.datetime.addEventListener('input', refreshReminders);
 
   m.save.addEventListener('click', async () => {
@@ -696,12 +987,16 @@ const fixtures = currentRound.map(([a, b]) => {
     );
   }
 
+  const secStandings = document.getElementById('sec-standings') as HTMLElement;
+
   function runSearch() {
     const term = search.value.toLowerCase().trim();
     if (!term) {
       secResults.hidden = true;
       secRound.hidden = false;
+      secStandings.hidden = false;
       secRoster.hidden = false;
+      renderMyMatch();
       return;
     }
     const matches = COACHES.filter((c) => {
@@ -722,7 +1017,10 @@ const fixtures = currentRound.map(([a, b]) => {
     resultsEmpty.hidden = matches.length > 0;
     secResults.hidden = false;
     secRound.hidden = true;
+    secStandings.hidden = true;
     secRoster.hidden = true;
+    document.getElementById('mi-partido')!.hidden = true;
+    paintList();
   }
 
   search.addEventListener('input', runSearch);
@@ -732,6 +1030,27 @@ const fixtures = currentRound.map(([a, b]) => {
     if (btn) openDetail(btn.dataset.open!);
   });
 
+  // ================= "Soy" =================
+  const meSelect = document.getElementById('me-select') as HTMLSelectElement;
+  meSelect.addEventListener('change', () => {
+    me = meSelect.value;
+    saveMe(me);
+    renderMe();
+  });
+
+  // ================= Clasificación: click en fila =================
+  document.getElementById('standings-body')!.addEventListener('click', (e) => {
+    const tr = (e.target as HTMLElement).closest<HTMLElement>('tr[data-open]');
+    if (tr) openDetail(tr.dataset.open!);
+  });
+
+  function openFromHash() {
+    const h = decodeURIComponent((location.hash || '').slice(1));
+    if (!h) return;
+    if (fmap.has(h)) openMatch(h);
+    else if (cmap.has(h)) openDetail(h);
+  }
+
   async function load() {
     if (!supabase) return;
     const [coachesRes, matchesRes] = await Promise.all([
@@ -739,7 +1058,7 @@ const fixtures = currentRound.map(([a, b]) => {
       supabase
         .from('matches')
         .select(
-          'id, scheduled_at, td_home, td_away, cas_home, cas_away, note, updated_at',
+          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, note, updated_at',
         ),
     ]);
 
@@ -764,9 +1083,16 @@ const fixtures = currentRound.map(([a, b]) => {
       paintFixtures();
     }
 
+    renderStandings();
+    renderMe();
+
     if (currentId) openDetail(currentId);
     if (currentFixture) openMatch(currentFixture);
     if (search.value.trim()) runSearch();
+    else openFromHash();
   }
+
+  renderMe();
+  openFromHash();
   load();
 </script>

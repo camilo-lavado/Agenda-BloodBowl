@@ -827,6 +827,200 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 
 .site-foot p { margin: 0; }
 
+/* ---------- Barra de herramientas: "Soy" + progreso ---------- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.me-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.me-pick select {
+  font: 600 14px/1.2 Inter, system-ui, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  padding: 8px 30px 8px 11px;
+  cursor: pointer;
+  max-width: 62vw;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: right 13px center, right 8px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.me-pick select:hover { border-color: var(--blood); }
+.me-pick select:focus { outline: none; border-color: var(--blood); box-shadow: 0 0 0 4px var(--ring-soft); }
+
+.progress {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-soft) 22%, transparent);
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--bronze), var(--wa));
+  transition: width .5s cubic-bezier(.2, .8, .2, 1);
+}
+
+.progress-fill.full { background: var(--wa); }
+
+.progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Tarjeta "Tu partido" ---------- */
+.mi-partido {
+  margin-top: 16px;
+  padding: 16px 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--blood) 35%, var(--line));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--blood-tint), transparent 60%),
+    var(--card);
+  box-shadow: var(--shadow);
+}
+
+.mp-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--blood);
+}
+
+.mp-teams {
+  margin: 0;
+  font-family: "Bebas Neue", Inter, sans-serif;
+  font-size: 1.4rem;
+  line-height: 1.05;
+}
+
+.mp-status { margin: 4px 0 12px; font-size: 13px; color: var(--ink-soft); }
+.mp-actions { display: flex; gap: 10px; }
+
+/* ---------- Clasificación ---------- */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius); }
+
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+
+.standings th,
+.standings td {
+  padding: 9px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.standings thead th {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--card-2);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.standings .c-pos { width: 30px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.standings .c-team { text-align: left; }
+.standings .c-pts { font-weight: 800; color: var(--blood-strong); }
+
+.standings tbody tr { border-top: 1px solid var(--line); cursor: pointer; transition: background-color .14s ease; }
+.standings tbody tr:first-child { border-top: 0; }
+.standings tbody tr:nth-child(even) { background: color-mix(in srgb, var(--card-2) 60%, var(--card)); }
+.standings tbody tr:hover { background: var(--blood-tint); }
+.standings tbody tr:first-child td:not(.c-team) { color: var(--ink); }
+
+.st-team { display: block; font-weight: 700; }
+.st-coach { display: block; font-size: 11px; color: var(--ink-soft); }
+
+/* ---------- Enlaces de la ficha ---------- */
+.d-links { display: flex; gap: 14px; flex-wrap: wrap; }
+
+.linkbtn {
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font: 600 12px/1 Inter, system-ui, sans-serif;
+  color: var(--blood);
+  cursor: pointer;
+  border-bottom: 1px dashed color-mix(in srgb, var(--blood) 45%, transparent);
+  transition: color .14s ease, border-color .14s ease;
+}
+
+.linkbtn:hover { color: var(--blood-strong); border-color: var(--blood-strong); }
+.linkbtn.flashed { color: var(--ok); border-color: transparent; }
+
+/* ---------- "Soy": resaltado de tu fila ---------- */
+.roster-item.is-me,
+.standings tr.is-me { background: color-mix(in srgb, var(--blood) 12%, var(--card)); }
+.roster-item.is-me { box-shadow: inset 3px 0 0 var(--blood); }
+.roster-item.is-me .js-name::after {
+  content: "  tú";
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--blood);
+}
+.fx-side.is-me .fx-team::after {
+  content: " · tú";
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--blood);
+}
+
 /* ---------- Móvil ---------- */
 @media (max-width: 620px) {
   .layout { width: min(760px, 94vw); }
@@ -890,6 +1084,22 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 
   .d-team,
   .m-title { font-size: 1.75rem; }
+
+  /* Barra de herramientas apilada */
+  .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .me-pick { flex-direction: column; align-items: stretch; gap: 5px; }
+  .me-pick select { max-width: none; width: 100%; }
+  .progress { min-width: 0; flex-wrap: wrap; gap: 6px 10px; }
+  .progress-track { flex: 1 1 100%; order: 2; }
+  .progress-text { order: 1; }
+
+  .mp-actions { flex-direction: column; }
+
+  /* Clasificación: solo lo esencial */
+  .standings .c-gep,
+  .standings .c-cas { display: none; }
+  .standings th,
+  .standings td { padding: 9px 8px; }
 }
 
 @media (max-width: 380px) {
