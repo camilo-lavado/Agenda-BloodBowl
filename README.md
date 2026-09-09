@@ -70,6 +70,25 @@ El resultado de `npm run build` es HTML estático en `dist/`. Sirve en cualquier
 - La **clasificación** se calcula sola con los resultados (V 3 / E 1 / D 0; desempate por TD±, bajas±).
 - El buscador muestra los resultados en un panel bajo el campo.
 
+## Bloqueo de edición
+
+Por defecto la web es de **solo lectura**. Para poder guardar cambios:
+
+1. En Supabase → SQL Editor, abre [`supabase/lock.sql`](supabase/lock.sql),
+   **cambia `'CAMBIA-ESTA-CLAVE'` por tu clave real** y ejecútalo. Esto cierra la
+   escritura directa: a partir de ahí solo se guarda a través de funciones que
+   exigen esa clave.
+2. En la web, pulsa **🔒 Bloqueado** (barra superior), escribe la clave y
+   *Desbloquear*. Queda recordada en ese navegador.
+3. Reglas de quién puede editar qué (se comprueban en la web):
+   - Cada quien edita **su propia ficha** (la del coach elegido en «Soy»).
+   - Cada partido lo editan **sus dos coaches**.
+   - **kroszover** (La orden del Santo Pernil) = **admin**: edita todo.
+
+> El servidor solo comprueba la clave; el «solo tu ficha / admin» es de la
+> interfaz. Para un grupo cerrado es suficiente. Para cambiar la clave, vuelve a
+> ejecutar el `INSERT … ON CONFLICT` de `lock.sql` con el nuevo valor.
+
 ## PWA (instalable)
 
 La web es instalable en el móvil (Añadir a pantalla de inicio) y funciona sin
@@ -100,4 +119,5 @@ public/
 supabase/
   schema.sql            tabla coaches + semilla
   matches.sql           tabla matches (día/hora + resultado)
+  lock.sql              cierra la escritura + funciones con clave de edición
 ```
