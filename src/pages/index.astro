@@ -37,7 +37,8 @@ const fixtures = currentRound.map(([a, b]) => {
       <h1>Tasting Blood VI — Contactos</h1>
       <p class="sub">
         Pincha un jugador para ver su contacto, o el centro de un partido para
-        fijar día, hora y resultado. Cualquiera puede editar; se guarda para todo el grupo.
+        fijar día, hora y resultado. Elige tu coach en «Soy» para editar tu ficha;
+        los partidos los edita cualquiera.
       </p>
       <input id="search" type="search" placeholder="Buscar equipo, coach o persona…" aria-label="Buscar" autocomplete="off" />
       <p id="status" class="banner" hidden></p>
@@ -182,6 +183,7 @@ const fixtures = currentRound.map(([a, b]) => {
         <input class="f-notes" type="text" placeholder="Horario, zona horaria…" autocomplete="off" />
       </label>
 
+      <p class="d-lock-note" hidden></p>
       <div class="d-actions">
         <button class="save-btn" type="button">Guardar</button>
         <a class="wa-btn disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
@@ -343,6 +345,11 @@ const fixtures = currentRound.map(([a, b]) => {
     } catch {}
   }
   let me = getMe();
+
+  // Permisos (solo en la interfaz): cada quien edita su propia ficha;
+  // kroszover (Camilo) puede editar todas. Los partidos son públicos.
+  const ADMIN_ID = 'la-orden-del-santo-pernil';
+  const canEditCoach = (id: string) => me === id || me === ADMIN_ID;
 
   const banner = document.getElementById('status') as HTMLParagraphElement;
   if (!supabase) {
@@ -695,6 +702,26 @@ const fixtures = currentRound.map(([a, b]) => {
     }
   }
 
+  function applyDetailLock() {
+    const can = !!currentId && canEditCoach(currentId);
+    const note = q<HTMLParagraphElement>('.d-lock-note');
+    [f.realname, f.whatsapp, f.notes].forEach((el) => {
+      el.readOnly = !can;
+      el.classList.toggle('locked', !can);
+    });
+    f.save.hidden = !can;
+    if (can) {
+      note.hidden = true;
+    } else {
+      note.hidden = false;
+      const who = currentId ? coachLabel(currentId) : 'su dueño';
+      note.textContent =
+        me === ''
+          ? '🔒 Elige tu coach en «Soy» (arriba) para poder editar tu ficha.'
+          : `🔒 Solo ${who} o Camilo pueden editar esta ficha.`;
+    }
+  }
+
   function openDetail(id: string) {
     const c = cmap.get(id);
     if (!c) return;
@@ -729,6 +756,7 @@ const fixtures = currentRound.map(([a, b]) => {
     f.st.textContent = '';
     f.st.className = 'card-status';
     refreshWa();
+    applyDetailLock();
     if (dlgMatch.open) dlgMatch.close();
     if (!dlg.open) dlg.showModal();
     setHash(id);
@@ -766,6 +794,10 @@ const fixtures = currentRound.map(([a, b]) => {
 
   f.save.addEventListener('click', async () => {
     if (!currentId) return;
+    if (!canEditCoach(currentId)) {
+      applyDetailLock();
+      return;
+    }
     const c = cmap.get(currentId)!;
     if (!supabase) {
       f.st.textContent = 'Sin conexión: no se guarda';
@@ -1036,6 +1068,7 @@ const fixtures = currentRound.map(([a, b]) => {
     me = meSelect.value;
     saveMe(me);
     renderMe();
+    applyDetailLock();
   });
 
   // ================= Clasificación: click en fila =================
