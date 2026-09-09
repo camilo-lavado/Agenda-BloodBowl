@@ -53,8 +53,6 @@
 
 * { box-sizing: border-box; }
 
-[hidden] { display: none !important; }
-
 button,
 .wa-btn,
 .roster-item,
@@ -910,105 +908,6 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
   color: var(--ink-soft);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-
-/* ---------- Candado / clave de edición ---------- */
-.lock {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.lock-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--bg);
-  color: var(--ink-soft);
-  font: 700 11px/1 Inter, system-ui, sans-serif;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color .16s ease, color .16s ease, background-color .16s ease;
-}
-
-.lock-btn:hover { border-color: var(--blood); color: var(--ink); }
-.lock .lock-ico { font-size: 13px; }
-
-.lock.is-open .lock-btn {
-  color: var(--ok);
-  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
-}
-
-.lock-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.lock-form input[type="password"] {
-  padding: 8px 11px;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  background: var(--bg);
-  color: var(--ink);
-  font: 400 14px/1.2 Inter, system-ui, sans-serif;
-  width: 150px;
-  outline: none;
-}
-
-.lock-form input[type="password"]:focus {
-  border-color: var(--blood);
-  box-shadow: 0 0 0 4px var(--ring-soft);
-}
-
-.lock-remember {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--ink-soft);
-}
-
-.lock-form button {
-  padding: 8px 12px;
-  border-radius: 9px;
-  border: 1px solid var(--blood);
-  background: transparent;
-  color: var(--blood);
-  font: 700 12px/1 Inter, system-ui, sans-serif;
-  cursor: pointer;
-  transition: background-color .16s ease;
-}
-
-.lock-form button:hover { background: var(--blood-tint); }
-
-.lock-msg { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
-.lock-msg.err { color: var(--err); }
-
-/* ---------- Estado bloqueado en las fichas ---------- */
-.d-box input.locked {
-  opacity: .75;
-  cursor: not-allowed;
-  border-style: dashed;
-}
-
-.d-box input.locked:focus { box-shadow: none; border-color: var(--line-strong); }
-
-.d-lock-note {
-  margin: 0;
-  padding: 9px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  background: var(--card-2);
-  font-size: 12.5px;
-  color: var(--ink-soft);
 }
 
 /* ---------- Tarjeta "Tu partido" ---------- */

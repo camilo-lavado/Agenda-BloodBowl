@@ -57,19 +57,6 @@ const fixtures = currentRound.map(([a, b]) => {
         <div class="progress-track"><span class="progress-fill" id="progress-fill"></span></div>
         <span class="progress-text" id="progress-text">— / {roster.length} con WhatsApp</span>
       </div>
-      <div class="lock" id="lock">
-        <button class="lock-btn" id="lock-btn" type="button" aria-expanded="false">
-          <span class="lock-ico" aria-hidden="true">🔒</span>
-          <span class="lock-txt">Bloqueado</span>
-        </button>
-        <form class="lock-form" id="lock-form" hidden>
-          <input id="lock-input" type="password" placeholder="Clave de edición"
-            autocomplete="off" aria-label="Clave de edición" />
-          <label class="lock-remember"><input type="checkbox" id="lock-remember" checked /> recordar</label>
-          <button type="submit">Desbloquear</button>
-          <span class="lock-msg" id="lock-msg" role="status"></span>
-        </form>
-      </div>
     </div>
 
     <section class="mi-partido" id="mi-partido" hidden>
@@ -195,7 +182,6 @@ const fixtures = currentRound.map(([a, b]) => {
         <input class="f-notes" type="text" placeholder="Horario, zona horaria…" autocomplete="off" />
       </label>
 
-      <p class="d-lock-note" hidden></p>
       <div class="d-actions">
         <button class="save-btn" type="button">Guardar</button>
         <a class="wa-btn disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
@@ -248,7 +234,6 @@ const fixtures = currentRound.map(([a, b]) => {
         <input class="m-note" type="text" placeholder="MVP, incidencias, link a la repetición…" autocomplete="off" />
       </label>
 
-      <p class="d-lock-note m-lock-note" hidden></p>
       <div class="d-actions">
         <button class="m-save" type="button">Guardar</button>
       </div>
@@ -358,77 +343,6 @@ const fixtures = currentRound.map(([a, b]) => {
     } catch {}
   }
   let me = getMe();
-
-  // Clave de edición — validada en el servidor, se recuerda en este dispositivo
-  const KEY_KEY = 'tb6_key';
-  const ADMIN_ID = 'la-orden-del-santo-pernil'; // kroszover = admin
-  function getKey(): string {
-    try {
-      return sessionStorage.getItem(KEY_KEY) || localStorage.getItem(KEY_KEY) || '';
-    } catch {
-      return '';
-    }
-  }
-  function saveKey(v: string, remember: boolean) {
-    try {
-      sessionStorage.setItem(KEY_KEY, v);
-      if (remember) localStorage.setItem(KEY_KEY, v);
-      else localStorage.removeItem(KEY_KEY);
-    } catch {}
-  }
-  function clearKey() {
-    try {
-      sessionStorage.removeItem(KEY_KEY);
-      localStorage.removeItem(KEY_KEY);
-    } catch {}
-  }
-  let editKey = getKey();
-  let keyOk = false; // se confirma contra el servidor al cargar / desbloquear
-
-  const isAdmin = () => keyOk && me === ADMIN_ID;
-  const canEditCoach = (id: string) => keyOk && (me === id || me === ADMIN_ID);
-  const canEditMatch = (fx: { home_id: string; away_id: string }) =>
-    keyOk && (me === fx.home_id || me === fx.away_id || me === ADMIN_ID);
-
-  function renderLock() {
-    const btn = document.getElementById('lock-btn');
-    const ico = document.querySelector('#lock-btn .lock-ico');
-    const txt = document.querySelector('#lock-btn .lock-txt');
-    const lock = document.getElementById('lock');
-    if (!btn || !ico || !txt || !lock) return;
-    lock.classList.toggle('is-open', keyOk);
-    ico.textContent = keyOk ? '🔓' : '🔒';
-    txt.textContent = keyOk
-      ? me === ADMIN_ID
-        ? 'Admin'
-        : 'Puedes editar'
-      : 'Bloqueado';
-  }
-
-  function handleWriteError(
-    error: { message?: string },
-    stEl: HTMLElement,
-    baseCls: string,
-  ) {
-    const msg = (error?.message || '').toLowerCase();
-    if (msg.includes('clave') || msg.includes('28000') || msg.includes('permission')) {
-      keyOk = false;
-      clearKey();
-      renderLock();
-      applyDetailLock();
-      applyMatchLock();
-      stEl.textContent = 'Clave inválida o caducada. Vuelve a desbloquear.';
-    } else {
-      stEl.textContent = 'Error: ' + (error?.message || 'no se pudo guardar');
-    }
-    stEl.className = baseCls + ' err';
-  }
-
-  async function validateKey(k: string): Promise<boolean> {
-    if (!supabase || !k) return false;
-    const { data, error } = await supabase.rpc('check_edit_key', { p_key: k });
-    return !error && data === true;
-  }
 
   const banner = document.getElementById('status') as HTMLParagraphElement;
   if (!supabase) {
@@ -781,28 +695,6 @@ const fixtures = currentRound.map(([a, b]) => {
     }
   }
 
-  function applyDetailLock() {
-    const c = currentId ? cmap.get(currentId) : null;
-    const can = !!currentId && canEditCoach(currentId);
-    const note = q<HTMLParagraphElement>('.d-lock-note');
-    [f.realname, f.whatsapp, f.notes].forEach((el) => {
-      el.readOnly = !can;
-      el.classList.toggle('locked', !can);
-    });
-    f.save.hidden = !can;
-    if (can) {
-      note.hidden = true;
-    } else {
-      note.hidden = false;
-      const who = c ? coachLabel(c.id) : 'su dueño';
-      note.textContent = !keyOk
-        ? '🔒 Solo lectura. Desbloquea con la clave para editar.'
-        : me === ''
-          ? '🔒 Elige tu coach en «Soy» para poder editar tu ficha.'
-          : `🔒 Solo puede editar esto ${who} o el admin.`;
-    }
-  }
-
   function openDetail(id: string) {
     const c = cmap.get(id);
     if (!c) return;
@@ -837,7 +729,6 @@ const fixtures = currentRound.map(([a, b]) => {
     f.st.textContent = '';
     f.st.className = 'card-status';
     refreshWa();
-    applyDetailLock();
     if (dlgMatch.open) dlgMatch.close();
     if (!dlg.open) dlg.showModal();
     setHash(id);
@@ -881,10 +772,6 @@ const fixtures = currentRound.map(([a, b]) => {
       f.st.className = 'card-status err';
       return;
     }
-    if (!canEditCoach(currentId)) {
-      applyDetailLock();
-      return;
-    }
     f.save.disabled = true;
     const label = f.save.textContent;
     f.save.textContent = 'Guardando…';
@@ -898,20 +785,13 @@ const fixtures = currentRound.map(([a, b]) => {
       notes: f.notes.value.trim() || null,
     };
 
-    const { error } = await supabase.rpc('save_coach', {
-      p_key: editKey,
-      p_id: payload.id,
-      p_team_name: payload.team_name,
-      p_fumbbl_coach: payload.fumbbl_coach,
-      p_real_name: payload.real_name,
-      p_whatsapp: payload.whatsapp,
-      p_notes: payload.notes,
-    });
+    const { error } = await supabase.from('coaches').upsert(payload);
     f.save.disabled = false;
     f.save.textContent = label;
 
     if (error) {
-      handleWriteError(error, f.st, 'card-status');
+      f.st.textContent = 'Error: ' + error.message;
+      f.st.className = 'card-status err';
       return;
     }
     state.set(currentId, { ...payload, updated_at: new Date().toISOString() });
@@ -1016,31 +896,9 @@ const fixtures = currentRound.map(([a, b]) => {
     m.st.textContent = '';
     m.st.className = 'm-status';
     refreshReminders();
-    applyMatchLock();
     if (dlg.open) dlg.close();
     if (!dlgMatch.open) dlgMatch.showModal();
     setHash(fixtureId);
-  }
-
-  function applyMatchLock() {
-    const fx = currentFixture ? fmap.get(currentFixture) : null;
-    const can = !!fx && canEditMatch(fx);
-    const note = mq<HTMLParagraphElement>('.m-lock-note');
-    [m.datetime, m.tdHome, m.tdAway, m.casHome, m.casAway, m.note].forEach((el) => {
-      el.readOnly = !can;
-      el.classList.toggle('locked', !can);
-    });
-    m.save.hidden = !can;
-    if (can) {
-      note.hidden = true;
-    } else {
-      note.hidden = false;
-      note.textContent = !keyOk
-        ? '🔒 Solo lectura. Desbloquea con la clave para editar.'
-        : me === ''
-          ? '🔒 Elige tu coach en «Soy» para editar tus partidos.'
-          : '🔒 Solo pueden editar este partido sus dos coaches o el admin.';
-    }
   }
 
   dlgMatch.addEventListener('close', clearHash);
@@ -1052,10 +910,6 @@ const fixtures = currentRound.map(([a, b]) => {
     if (!supabase) {
       m.st.textContent = 'Sin conexión: no se guarda';
       m.st.className = 'm-status err';
-      return;
-    }
-    if (!canEditMatch(fx)) {
-      applyMatchLock();
       return;
     }
     m.save.disabled = true;
@@ -1079,26 +933,13 @@ const fixtures = currentRound.map(([a, b]) => {
       note: m.note.value.trim() || null,
     };
 
-    const { error } = await supabase.rpc('save_match', {
-      p_key: editKey,
-      p_id: payload.id,
-      p_round: payload.round,
-      p_home_id: payload.home_id,
-      p_away_id: payload.away_id,
-      p_home_team: payload.home_team,
-      p_away_team: payload.away_team,
-      p_scheduled_at: payload.scheduled_at,
-      p_td_home: payload.td_home,
-      p_td_away: payload.td_away,
-      p_cas_home: payload.cas_home,
-      p_cas_away: payload.cas_away,
-      p_note: payload.note,
-    });
+    const { error } = await supabase.from('matches').upsert(payload);
     m.save.disabled = false;
     m.save.textContent = label;
 
     if (error) {
-      handleWriteError(error, m.st, 'm-status');
+      m.st.textContent = 'Error: ' + error.message;
+      m.st.className = 'm-status err';
       return;
     }
     mstate.set(currentFixture, { ...payload, updated_at: new Date().toISOString() });
@@ -1195,57 +1036,6 @@ const fixtures = currentRound.map(([a, b]) => {
     me = meSelect.value;
     saveMe(me);
     renderMe();
-    renderLock();
-    applyDetailLock();
-    applyMatchLock();
-  });
-
-  // ================= Candado / clave de edición =================
-  const lockBtn = document.getElementById('lock-btn') as HTMLButtonElement;
-  const lockForm = document.getElementById('lock-form') as HTMLFormElement;
-  const lockInput = document.getElementById('lock-input') as HTMLInputElement;
-  const lockRemember = document.getElementById('lock-remember') as HTMLInputElement;
-  const lockMsg = document.getElementById('lock-msg') as HTMLElement;
-
-  lockBtn.addEventListener('click', () => {
-    if (keyOk) {
-      // ya desbloqueado -> bloquear de nuevo
-      keyOk = false;
-      editKey = '';
-      clearKey();
-      renderLock();
-      applyDetailLock();
-      applyMatchLock();
-      return;
-    }
-    const show = lockForm.hidden;
-    lockForm.hidden = !show;
-    lockBtn.setAttribute('aria-expanded', String(show));
-    if (show) lockInput.focus();
-  });
-
-  lockForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const k = lockInput.value.trim();
-    if (!k) return;
-    lockMsg.textContent = 'Comprobando…';
-    lockMsg.className = 'lock-msg';
-    const ok = await validateKey(k);
-    if (ok) {
-      editKey = k;
-      keyOk = true;
-      saveKey(k, lockRemember.checked);
-      lockForm.hidden = true;
-      lockBtn.setAttribute('aria-expanded', 'false');
-      lockInput.value = '';
-      lockMsg.textContent = '';
-      renderLock();
-      applyDetailLock();
-      applyMatchLock();
-    } else {
-      lockMsg.textContent = 'Clave incorrecta';
-      lockMsg.className = 'lock-msg err';
-    }
   });
 
   // ================= Clasificación: click en fila =================
@@ -1293,13 +1083,6 @@ const fixtures = currentRound.map(([a, b]) => {
       paintFixtures();
     }
 
-    // Validar la clave guardada contra el servidor
-    if (editKey) {
-      keyOk = await validateKey(editKey);
-      if (!keyOk) clearKey();
-    }
-    renderLock();
-
     renderStandings();
     renderMe();
 
@@ -1310,7 +1093,6 @@ const fixtures = currentRound.map(([a, b]) => {
   }
 
   renderMe();
-  renderLock();
   openFromHash();
   load();
 </script>
