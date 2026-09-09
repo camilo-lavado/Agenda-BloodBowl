@@ -1,0 +1,16 @@
+{
+  "name": "tasting-blood-vi-contactos",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "astro": "^5.13.0"
+  }
+}

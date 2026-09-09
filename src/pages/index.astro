@@ -1,0 +1,683 @@
+---
+import Base from '../layouts/Base.astro';
+import { coaches } from '../data/coaches';
+import {
+  currentRound,
+  currentRoundLabel,
+  rivalId,
+  fixtureId,
+} from '../data/schedule';
+
+const byId = new Map(coaches.map((c) => [c.id, c]));
+
+const enriched = coaches.map((c) => {
+  const rid = rivalId(c.id);
+  return {
+    ...c,
+    rivalId: rid,
+    rivalName: rid ? byId.get(rid)?.team_name ?? null : null,
+  };
+});
+
+const roster = [...enriched].sort((a, b) =>
+  a.team_name.localeCompare(b.team_name, 'es'),
+);
+
+const fixtures = currentRound.map(([a, b]) => {
+  const home = byId.get(a)!;
+  const away = byId.get(b)!;
+  return { home, away, id: fixtureId(a, b) };
+});
+---
+
+<Base>
+  <div class="layout">
+    <header class="site-head">
+      <p class="kicker">FUMBBL · Blood Bowl · {currentRoundLabel}</p>
+      <h1>Tasting Blood VI — Contactos</h1>
+      <p class="sub">
+        Pincha un jugador para ver su contacto, o el centro de un partido para
+        fijar día, hora y resultado. Cualquiera puede editar; se guarda para todo el grupo.
+      </p>
+      <input id="search" type="search" placeholder="Buscar equipo, coach o persona…" aria-label="Buscar" />
+      <p id="status" class="banner" hidden></p>
+    </header>
+
+    <section class="section">
+      <h2>{currentRoundLabel} <span class="count">{fixtures.length} partidos</span></h2>
+      <div class="fixtures">
+        {fixtures.map((fx) => (
+          <div class="fixture" data-fixture={fx.id}>
+            <button class="fx-side" type="button" data-id={fx.home.id} data-open={fx.home.id}>
+              <span class="status-dot" data-state="empty" aria-hidden="true"></span>
+              <span class="fx-team">{fx.home.team_name}</span>
+              <span class="fx-coach js-name">{fx.home.fumbbl_coach}</span>
+            </button>
+            <button class="fx-center" type="button" data-match={fx.id}
+              aria-label={`Partido ${fx.home.team_name} contra ${fx.away.team_name}`}>
+              <span class="fx-vs">vs</span>
+              <span class="fx-info">agendar</span>
+            </button>
+            <button class="fx-side right" type="button" data-id={fx.away.id} data-open={fx.away.id}>
+              <span class="status-dot" data-state="empty" aria-hidden="true"></span>
+              <span class="fx-team">{fx.away.team_name}</span>
+              <span class="fx-coach js-name">{fx.away.fumbbl_coach}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Jugadores <span class="count">{roster.length}</span></h2>
+      <ul class="roster">
+        {roster.map((c) => (
+          <li>
+            <button class="roster-item" type="button" data-id={c.id} data-open={c.id}>
+              <span class="status-dot" data-state="empty" aria-hidden="true"></span>
+              <span class="roster-main">
+                <span class="js-name">{c.fumbbl_coach}</span>
+                <span class="roster-sub">{c.team_name} · {c.race}</span>
+              </span>
+              <span class="roster-handle">@{c.fumbbl_coach}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <footer class="site-foot">
+      <p>Sin registro ni contraseñas. Los datos se guardan en Supabase. Hecho para el grupo de Tasting Blood VI.</p>
+    </footer>
+  </div>
+
+  <!-- ==================== Ficha de contacto ==================== -->
+  <dialog id="detail" class="detail">
+    <div class="d-box">
+      <button class="d-close" type="button" aria-label="Cerrar">✕</button>
+      <p class="d-eyebrow">Contacto</p>
+      <h2 class="d-team"></h2>
+      <p class="d-meta"></p>
+      <p class="d-coachline">Coach FUMBBL: <strong class="d-coach"></strong></p>
+
+      <button class="d-rival" type="button" hidden>
+        <span>{currentRoundLabel} vs</span>
+        <strong class="d-rival-name"></strong>
+        <span class="d-rival-go">ver contacto →</span>
+      </button>
+
+      <label>
+        Quién es
+        <input class="f-realname" type="text" placeholder="Sin asignar" autocomplete="off" />
+      </label>
+      <label>
+        WhatsApp
+        <input class="f-whatsapp" type="tel" inputmode="numeric" placeholder="9 1234 5678" autocomplete="off" />
+        <small>Chile: escribe solo <strong>9&nbsp;1234&nbsp;5678</strong> (añadimos el 56). Otro país: número completo con código, sin «+».</small>
+      </label>
+      <label>
+        Notas
+        <input class="f-notes" type="text" placeholder="Horario, zona horaria…" autocomplete="off" />
+      </label>
+
+      <div class="d-actions">
+        <button class="save-btn" type="button">Guardar</button>
+        <a class="wa-btn disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>
+      </div>
+      <div class="d-foot">
+        <span class="updated"></span>
+        <span class="card-status" role="status"></span>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ==================== Ficha de partido ==================== -->
+  <dialog id="match" class="detail">
+    <div class="d-box">
+      <button class="m-close" type="button" aria-label="Cerrar">✕</button>
+      <p class="d-eyebrow">{currentRoundLabel}</p>
+      <h2 class="m-title"></h2>
+
+      <label>
+        Día y hora
+        <input class="m-datetime" type="datetime-local" />
+      </label>
+
+      <fieldset class="m-score">
+        <legend>Resultado</legend>
+        <div class="m-score-row">
+          <span class="m-score-team m-home"></span>
+          <span class="m-score-label">TD</span>
+          <input class="m-td-home" type="number" min="0" max="30" inputmode="numeric" />
+          <span class="m-score-sep">–</span>
+          <input class="m-td-away" type="number" min="0" max="30" inputmode="numeric" />
+          <span class="m-score-team m-away"></span>
+        </div>
+        <div class="m-score-row">
+          <span class="m-score-team"></span>
+          <span class="m-score-label">Bajas</span>
+          <input class="m-cas-home" type="number" min="0" max="30" inputmode="numeric" />
+          <span class="m-score-sep">–</span>
+          <input class="m-cas-away" type="number" min="0" max="30" inputmode="numeric" />
+          <span class="m-score-team"></span>
+        </div>
+      </fieldset>
+
+      <label>
+        Nota
+        <input class="m-note" type="text" placeholder="MVP, incidencias, link a la repetición…" autocomplete="off" />
+      </label>
+
+      <div class="d-actions">
+        <button class="m-save" type="button">Guardar</button>
+      </div>
+
+      <p class="m-remind-label">Recordar por WhatsApp</p>
+      <div class="d-actions">
+        <a class="wa-btn m-remind-home disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer"></a>
+        <a class="wa-btn m-remind-away disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer"></a>
+      </div>
+
+      <div class="d-foot">
+        <span class="m-updated"></span>
+        <span class="m-status" role="status"></span>
+      </div>
+    </div>
+  </dialog>
+
+  <script set:html={`
+    window.__COACHES__ = ${JSON.stringify(enriched)};
+    window.__FIXTURES__ = ${JSON.stringify(
+      fixtures.map((fx) => ({
+        id: fx.id,
+        home_id: fx.home.id,
+        away_id: fx.away.id,
+        home_team: fx.home.team_name,
+        away_team: fx.away.team_name,
+      })),
+    )};
+    window.__ROUND__ = ${JSON.stringify(currentRoundLabel)};
+  `} />
+</Base>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const SUPABASE_URL = (import.meta.env.PUBLIC_SUPABASE_URL ?? '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\/rest\/v1\/?$/, '')
+    .replace(/\/+$/, '');
+  const SUPABASE_KEY = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '')
+    .trim()
+    .replace(/^["']|["']$/g, '');
+
+  const supabase =
+    SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+  interface CoachInfo {
+    id: string;
+    team_name: string;
+    fumbbl_coach: string;
+    race: string;
+    rivalId: string | null;
+    rivalName: string | null;
+  }
+  interface Row {
+    id: string;
+    real_name: string | null;
+    whatsapp: string | null;
+    notes: string | null;
+    updated_at?: string | null;
+  }
+  interface FixtureInfo {
+    id: string;
+    home_id: string;
+    away_id: string;
+    home_team: string;
+    away_team: string;
+  }
+  interface MatchRow {
+    id: string;
+    scheduled_at: string | null;
+    td_home: number | null;
+    td_away: number | null;
+    cas_home: number | null;
+    cas_away: number | null;
+    note: string | null;
+    updated_at?: string | null;
+  }
+
+  const COACHES: CoachInfo[] = (window as any).__COACHES__ ?? [];
+  const FIXTURES: FixtureInfo[] = (window as any).__FIXTURES__ ?? [];
+  const ROUND: string = (window as any).__ROUND__ ?? '';
+  const cmap = new Map(COACHES.map((c) => [c.id, c]));
+  const fmap = new Map(FIXTURES.map((fx) => [fx.id, fx]));
+  const state = new Map<string, Row>();
+  const mstate = new Map<string, MatchRow>();
+
+  const banner = document.getElementById('status') as HTMLParagraphElement;
+  if (!supabase) {
+    banner.hidden = false;
+    banner.innerHTML =
+      '⚠️ Supabase no está configurado. Añade <code>PUBLIC_SUPABASE_URL</code> y <code>PUBLIC_SUPABASE_ANON_KEY</code> y vuelve a desplegar. Puedes escribir, pero <strong>no se guarda</strong>.';
+  }
+
+  // Normaliza a formato internacional sin «+». Casi todos son Chile (+56);
+  // un móvil chileno nacional son 9 dígitos empezando por 9.
+  function normalize(raw: string | null | undefined): string {
+    let d = (raw ?? '').replace(/\D+/g, '');
+    if (!d) return '';
+    if (d.startsWith('00')) d = d.slice(2);
+    if (d.length === 9 && d.startsWith('9')) d = '56' + d;
+    else if (d.length === 8) d = '569' + d;
+    return d;
+  }
+
+  function waHref(number: string, msg: string): string | null {
+    const d = normalize(number);
+    if (d.length < 8) return null;
+    return `https://wa.me/${d}?text=${encodeURIComponent(msg)}`;
+  }
+
+  function fmtDateTime(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('es-ES', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  // ISO -> value para <input type="datetime-local"> en hora local
+  function toLocalInput(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours(),
+    )}:${pad(d.getMinutes())}`;
+  }
+
+  function statusOf(id: string): 'ok' | 'partial' | 'empty' {
+    const r = state.get(id);
+    if (r?.whatsapp) return 'ok';
+    if (r?.real_name) return 'partial';
+    return 'empty';
+  }
+
+  function paintList() {
+    document.querySelectorAll<HTMLElement>('[data-id]').forEach((el) => {
+      const id = el.dataset.id!;
+      const dot = el.querySelector<HTMLElement>('.status-dot');
+      if (dot) dot.dataset.state = statusOf(id);
+      const nameEl = el.querySelector<HTMLElement>('.js-name');
+      if (nameEl) {
+        const r = state.get(id);
+        nameEl.textContent = r?.real_name || cmap.get(id)!.fumbbl_coach;
+      }
+    });
+  }
+
+  function paintFixtures() {
+    document.querySelectorAll<HTMLElement>('.fixture').forEach((el) => {
+      const m = mstate.get(el.dataset.fixture!);
+      const info = el.querySelector<HTMLElement>('.fx-info')!;
+      const hasScore =
+        m && (m.td_home != null || m.td_away != null);
+      if (hasScore) {
+        const cas =
+          m!.cas_home != null || m!.cas_away != null
+            ? ` · ${m!.cas_home ?? 0}–${m!.cas_away ?? 0} bajas`
+            : '';
+        info.textContent = `${m!.td_home ?? 0}–${m!.td_away ?? 0}${cas}`;
+        info.dataset.kind = 'result';
+      } else if (m?.scheduled_at) {
+        info.textContent = fmtDateTime(m.scheduled_at);
+        info.dataset.kind = 'date';
+      } else {
+        info.textContent = 'agendar';
+        info.dataset.kind = 'empty';
+      }
+    });
+  }
+
+  // ================= Ficha de contacto =================
+  const dlg = document.getElementById('detail') as HTMLDialogElement;
+  const q = <T extends HTMLElement>(sel: string) => dlg.querySelector(sel) as T;
+  const f = {
+    team: q<HTMLHeadingElement>('.d-team'),
+    meta: q<HTMLParagraphElement>('.d-meta'),
+    coach: q<HTMLElement>('.d-coach'),
+    rival: q<HTMLButtonElement>('.d-rival'),
+    rivalName: q<HTMLElement>('.d-rival-name'),
+    realname: q<HTMLInputElement>('.f-realname'),
+    whatsapp: q<HTMLInputElement>('.f-whatsapp'),
+    notes: q<HTMLInputElement>('.f-notes'),
+    wa: q<HTMLAnchorElement>('.wa-btn'),
+    save: q<HTMLButtonElement>('.save-btn'),
+    updated: q<HTMLSpanElement>('.updated'),
+    st: q<HTMLSpanElement>('.card-status'),
+  };
+  let currentId: string | null = null;
+
+  function refreshWa() {
+    const fallback = currentId ? cmap.get(currentId)!.fumbbl_coach : '';
+    const name = f.realname.value.trim() || fallback;
+    const link = waHref(
+      f.whatsapp.value,
+      `¡Hola ${name}! Te escribo por Tasting Blood VI para agendar nuestro partido. ¿Qué días y horas te vienen bien?`,
+    );
+    if (link) {
+      f.wa.href = link;
+      f.wa.classList.remove('disabled');
+      f.wa.setAttribute('aria-disabled', 'false');
+    } else {
+      f.wa.removeAttribute('href');
+      f.wa.classList.add('disabled');
+      f.wa.setAttribute('aria-disabled', 'true');
+    }
+  }
+
+  function openDetail(id: string) {
+    const c = cmap.get(id);
+    if (!c) return;
+    currentId = id;
+    f.team.textContent = c.team_name;
+    f.meta.textContent = c.race;
+    f.coach.textContent = c.fumbbl_coach;
+
+    if (c.rivalName && c.rivalId) {
+      f.rival.hidden = false;
+      f.rivalName.textContent = c.rivalName;
+      f.rival.dataset.rival = c.rivalId;
+    } else {
+      f.rival.hidden = true;
+      delete f.rival.dataset.rival;
+    }
+
+    const r = state.get(id);
+    f.realname.value = r?.real_name ?? '';
+    f.whatsapp.value = r?.whatsapp ?? '';
+    f.notes.value = r?.notes ?? '';
+    const hasContent = !!(r?.real_name || r?.whatsapp || r?.notes);
+    f.updated.textContent =
+      hasContent && r?.updated_at
+        ? 'Actualizado ' +
+          new Date(r.updated_at).toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })
+        : 'Sin datos guardados';
+    f.st.textContent = '';
+    f.st.className = 'card-status';
+    refreshWa();
+    if (dlgMatch.open) dlgMatch.close();
+    if (!dlg.open) dlg.showModal();
+  }
+
+  f.realname.addEventListener('input', refreshWa);
+  f.whatsapp.addEventListener('input', refreshWa);
+  f.rival.addEventListener('click', () => {
+    const rid = f.rival.dataset.rival;
+    if (rid) openDetail(rid);
+  });
+
+  f.save.addEventListener('click', async () => {
+    if (!currentId) return;
+    const c = cmap.get(currentId)!;
+    if (!supabase) {
+      f.st.textContent = 'Sin conexión: no se guarda';
+      f.st.className = 'card-status err';
+      return;
+    }
+    f.save.disabled = true;
+    const label = f.save.textContent;
+    f.save.textContent = 'Guardando…';
+
+    const payload = {
+      id: currentId,
+      team_name: c.team_name,
+      fumbbl_coach: c.fumbbl_coach,
+      real_name: f.realname.value.trim() || null,
+      whatsapp: normalize(f.whatsapp.value) || null,
+      notes: f.notes.value.trim() || null,
+    };
+
+    const { error } = await supabase.from('coaches').upsert(payload);
+    f.save.disabled = false;
+    f.save.textContent = label;
+
+    if (error) {
+      f.st.textContent = 'Error: ' + error.message;
+      f.st.className = 'card-status err';
+      return;
+    }
+    state.set(currentId, { ...payload, updated_at: new Date().toISOString() });
+    f.st.textContent = 'Guardado ✓';
+    f.st.className = 'card-status ok';
+    f.updated.textContent = 'Actualizado ahora';
+    paintList();
+    window.setTimeout(() => {
+      f.st.textContent = '';
+      f.st.className = 'card-status';
+    }, 2500);
+  });
+
+  q<HTMLButtonElement>('.d-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg) dlg.close();
+  });
+
+  // ================= Ficha de partido =================
+  const dlgMatch = document.getElementById('match') as HTMLDialogElement;
+  const mq = <T extends HTMLElement>(sel: string) => dlgMatch.querySelector(sel) as T;
+  const m = {
+    title: mq<HTMLHeadingElement>('.m-title'),
+    datetime: mq<HTMLInputElement>('.m-datetime'),
+    homeLabels: dlgMatch.querySelectorAll<HTMLElement>('.m-home'),
+    awayLabels: dlgMatch.querySelectorAll<HTMLElement>('.m-away'),
+    tdHome: mq<HTMLInputElement>('.m-td-home'),
+    tdAway: mq<HTMLInputElement>('.m-td-away'),
+    casHome: mq<HTMLInputElement>('.m-cas-home'),
+    casAway: mq<HTMLInputElement>('.m-cas-away'),
+    note: mq<HTMLInputElement>('.m-note'),
+    save: mq<HTMLButtonElement>('.m-save'),
+    remindHome: mq<HTMLAnchorElement>('.m-remind-home'),
+    remindAway: mq<HTMLAnchorElement>('.m-remind-away'),
+    updated: mq<HTMLSpanElement>('.m-updated'),
+    st: mq<HTMLSpanElement>('.m-status'),
+  };
+  let currentFixture: string | null = null;
+
+  const numOrNull = (el: HTMLInputElement) =>
+    el.value.trim() === '' ? null : Math.max(0, parseInt(el.value, 10) || 0);
+
+  function refreshReminders() {
+    if (!currentFixture) return;
+    const fx = fmap.get(currentFixture)!;
+    const whenIso = m.datetime.value ? new Date(m.datetime.value).toISOString() : null;
+    const when = whenIso ? fmtDateTime(whenIso) : null;
+    const base = `Recordatorio Tasting Blood VI — ${fx.home_team} vs ${fx.away_team}.`;
+    const tail = when
+      ? ` Quedamos el ${when}. ¡Nos vemos!`
+      : ` ¿Cerramos día y hora?`;
+
+    [
+      [m.remindHome, fx.home_id],
+      [m.remindAway, fx.away_id],
+    ].forEach(([btn, coachId]) => {
+      const a = btn as HTMLAnchorElement;
+      const coach = cmap.get(coachId as string)!;
+      const rec = state.get(coachId as string);
+      const label = rec?.real_name || coach.fumbbl_coach;
+      a.textContent = `Recordar a ${label}`;
+      const link = rec?.whatsapp ? waHref(rec.whatsapp, base + tail) : null;
+      if (link) {
+        a.href = link;
+        a.classList.remove('disabled');
+        a.setAttribute('aria-disabled', 'false');
+        a.title = '';
+      } else {
+        a.removeAttribute('href');
+        a.classList.add('disabled');
+        a.setAttribute('aria-disabled', 'true');
+        a.title = 'Sin WhatsApp guardado para este coach';
+      }
+    });
+  }
+
+  function openMatch(fixtureId: string) {
+    const fx = fmap.get(fixtureId);
+    if (!fx) return;
+    currentFixture = fixtureId;
+    m.title.textContent = `${fx.home_team} vs ${fx.away_team}`;
+    m.homeLabels.forEach((el) => (el.textContent = fx.home_team));
+    m.awayLabels.forEach((el) => (el.textContent = fx.away_team));
+
+    const r = mstate.get(fixtureId);
+    m.datetime.value = toLocalInput(r?.scheduled_at ?? null);
+    m.tdHome.value = r?.td_home != null ? String(r.td_home) : '';
+    m.tdAway.value = r?.td_away != null ? String(r.td_away) : '';
+    m.casHome.value = r?.cas_home != null ? String(r.cas_home) : '';
+    m.casAway.value = r?.cas_away != null ? String(r.cas_away) : '';
+    m.note.value = r?.note ?? '';
+    m.updated.textContent = r?.updated_at
+      ? 'Actualizado ' +
+        new Date(r.updated_at).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : 'Sin datos guardados';
+    m.st.textContent = '';
+    m.st.className = 'm-status';
+    refreshReminders();
+    if (dlg.open) dlg.close();
+    if (!dlgMatch.open) dlgMatch.showModal();
+  }
+
+  m.datetime.addEventListener('input', refreshReminders);
+
+  m.save.addEventListener('click', async () => {
+    if (!currentFixture) return;
+    const fx = fmap.get(currentFixture)!;
+    if (!supabase) {
+      m.st.textContent = 'Sin conexión: no se guarda';
+      m.st.className = 'm-status err';
+      return;
+    }
+    m.save.disabled = true;
+    const label = m.save.textContent;
+    m.save.textContent = 'Guardando…';
+
+    const payload = {
+      id: currentFixture,
+      round: ROUND,
+      home_id: fx.home_id,
+      away_id: fx.away_id,
+      home_team: fx.home_team,
+      away_team: fx.away_team,
+      scheduled_at: m.datetime.value
+        ? new Date(m.datetime.value).toISOString()
+        : null,
+      td_home: numOrNull(m.tdHome),
+      td_away: numOrNull(m.tdAway),
+      cas_home: numOrNull(m.casHome),
+      cas_away: numOrNull(m.casAway),
+      note: m.note.value.trim() || null,
+    };
+
+    const { error } = await supabase.from('matches').upsert(payload);
+    m.save.disabled = false;
+    m.save.textContent = label;
+
+    if (error) {
+      m.st.textContent = 'Error: ' + error.message;
+      m.st.className = 'm-status err';
+      return;
+    }
+    mstate.set(currentFixture, { ...payload, updated_at: new Date().toISOString() });
+    m.st.textContent = 'Guardado ✓';
+    m.st.className = 'm-status ok';
+    m.updated.textContent = 'Actualizado ahora';
+    paintFixtures();
+    window.setTimeout(() => {
+      m.st.textContent = '';
+      m.st.className = 'm-status';
+    }, 2500);
+  });
+
+  mq<HTMLButtonElement>('.m-close').addEventListener('click', () => dlgMatch.close());
+  dlgMatch.addEventListener('click', (e) => {
+    if (e.target === dlgMatch) dlgMatch.close();
+  });
+
+  // ================= Enganches =================
+  document.querySelectorAll<HTMLElement>('[data-open]').forEach((el) => {
+    el.addEventListener('click', () => openDetail(el.dataset.open!));
+  });
+  document.querySelectorAll<HTMLElement>('[data-match]').forEach((el) => {
+    el.addEventListener('click', () => openMatch(el.dataset.match!));
+  });
+
+  const search = document.getElementById('search') as HTMLInputElement;
+  search.addEventListener('input', () => {
+    const term = search.value.toLowerCase().trim();
+    document.querySelectorAll<HTMLElement>('.roster-item').forEach((el) => {
+      const c = cmap.get(el.dataset.id!)!;
+      const r = state.get(el.dataset.id!);
+      const hay = (
+        c.team_name +
+        ' ' +
+        c.fumbbl_coach +
+        ' ' +
+        (r?.real_name ?? '')
+      ).toLowerCase();
+      el.hidden = !!term && !hay.includes(term);
+    });
+  });
+
+  async function load() {
+    if (!supabase) return;
+    const [coachesRes, matchesRes] = await Promise.all([
+      supabase.from('coaches').select('id, real_name, whatsapp, notes, updated_at'),
+      supabase
+        .from('matches')
+        .select(
+          'id, scheduled_at, td_home, td_away, cas_home, cas_away, note, updated_at',
+        ),
+    ]);
+
+    if (coachesRes.error) {
+      banner.hidden = false;
+      banner.textContent =
+        'No se pudieron cargar los contactos: ' + coachesRes.error.message;
+    } else {
+      (coachesRes.data ?? []).forEach((r: Row) => state.set(r.id, r));
+      paintList();
+    }
+
+    if (matchesRes.error) {
+      // La tabla puede no existir todavía (matches.sql sin ejecutar): aviso suave.
+      banner.hidden = false;
+      banner.innerHTML =
+        'Los contactos funcionan. Para día/hora y resultado, ejecuta <code>supabase/matches.sql</code> en Supabase. (' +
+        matchesRes.error.message +
+        ')';
+    } else {
+      (matchesRes.data ?? []).forEach((r: MatchRow) => mstate.set(r.id, r));
+      paintFixtures();
+    }
+
+    if (currentId) openDetail(currentId);
+    if (currentFixture) openMatch(currentFixture);
+  }
+  load();
+</script>
