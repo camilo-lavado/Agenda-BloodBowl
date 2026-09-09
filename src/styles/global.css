@@ -77,6 +77,21 @@ body {
   min-height: 100vh;
 }
 
+/* Grano de papel muy sutil sobre todo el fondo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: color-mix(in srgb, var(--blood) 28%, transparent);
+}
+
 .layout {
   width: min(760px, 92vw);
   margin-inline: auto;
@@ -206,20 +221,85 @@ body {
   color: var(--ink-soft);
 }
 
+.section > h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  align-self: center;
+  background: linear-gradient(90deg, var(--line-strong), transparent);
+}
+
+/* Leyenda de estados */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: -4px 0 14px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .status-dot { animation: none; box-shadow: none; }
+
+/* Píldora de estado de la ronda */
+.pill {
+  font-family: Inter, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.pill:empty { display: none; }
+
+.pill[data-tone="pending"] {
+  color: var(--partial);
+  background: color-mix(in srgb, var(--partial) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--partial) 38%, transparent);
+}
+
+.pill[data-tone="done"] {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 38%, transparent);
+}
+
+.results-empty {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
 /* ---------- Ronda en curso ---------- */
 .fixtures { display: flex; flex-direction: column; gap: 10px; }
 
 .fixture {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: stretch;
   gap: 6px;
-  background: var(--card);
+  background: linear-gradient(180deg, var(--card), var(--card-2));
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
   transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.fixture::after,
+.roster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
 }
 
 .fixture:hover {
@@ -274,6 +354,14 @@ body {
 .fx-center:hover { background: var(--blood-tint); }
 .fx-center:hover .fx-info[data-kind="empty"] { color: var(--blood); }
 
+/* Partido con resultado: se resalta en verde */
+.fixture[data-played] { border-color: color-mix(in srgb, var(--ok) 42%, var(--line)); }
+.fixture[data-played] .fx-center {
+  background: color-mix(in srgb, var(--ok) 14%, var(--card-2));
+  border-color: color-mix(in srgb, var(--ok) 26%, var(--line));
+}
+.fixture[data-played] .fx-vs { color: var(--ok); }
+
 .fx-vs {
   font-family: "Bebas Neue", Inter, sans-serif;
   font-size: 1.05rem;
@@ -289,7 +377,11 @@ body {
   transition: color .16s ease;
 }
 
-.fx-info[data-kind="result"] { font-weight: 700; font-size: 13px; color: var(--ink); }
+.fx-info[data-kind="result"] { font-weight: 700; font-size: 14px; color: var(--ink-soft); }
+.fx-info[data-kind="result"] .score { display: block; }
+.fx-info[data-kind="result"] .win { color: var(--ok); }
+.fx-info[data-kind="result"] .dash { margin: 0 2px; color: var(--ink-soft); }
+.fx-info[data-kind="result"] .cas { display: block; font-weight: 600; font-size: 10px; color: var(--ink-soft); letter-spacing: .02em; }
 .fx-info[data-kind="date"] { color: var(--partial); font-weight: 600; }
 .fx-info[data-kind="empty"] {
   text-transform: uppercase;
@@ -300,6 +392,7 @@ body {
 
 /* ---------- Listado de jugadores ---------- */
 .roster {
+  position: relative;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -311,6 +404,11 @@ body {
 }
 
 .roster li + li { border-top: 1px solid var(--line); }
+
+/* Rayado tipo registro (pierde ante :hover / :active) */
+:where(.roster li:nth-child(even)) > .roster-item {
+  background: color-mix(in srgb, var(--card-2) 65%, var(--card));
+}
 
 .roster-item {
   position: relative;
@@ -420,6 +518,26 @@ dialog.detail[open]::backdrop { animation: backdropIn .22s ease both; }
   border-bottom: 0;
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -10px 44px rgba(0, 0, 0, .38);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.d-box::-webkit-scrollbar { width: 10px; }
+.d-box::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid var(--card);
+}
+
+/* Tirador del panel inferior (solo móvil) */
+.d-box::before {
+  content: "";
+  width: 42px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  align-self: center;
+  margin: -10px 0 2px;
 }
 
 dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 1) both; }
@@ -435,6 +553,7 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
     max-height: 88dvh;
     box-shadow: var(--shadow-lg);
   }
+  .d-box::before { display: none; }
   dialog.detail[open] .d-box { animation: popIn .2s ease both; }
 }
 
@@ -700,7 +819,8 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 .site-foot {
   margin-top: 40px;
   padding-top: 22px;
-  border-top: 2px solid var(--line);
+  border-top: 0;
+  background: linear-gradient(90deg, var(--line-strong), transparent) top left / 100% 2px no-repeat;
   font-size: 13px;
   color: var(--ink-soft);
 }

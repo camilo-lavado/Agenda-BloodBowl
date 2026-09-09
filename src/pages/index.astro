@@ -39,12 +39,22 @@ const fixtures = currentRound.map(([a, b]) => {
         Pincha un jugador para ver su contacto, o el centro de un partido para
         fijar día, hora y resultado. Cualquiera puede editar; se guarda para todo el grupo.
       </p>
-      <input id="search" type="search" placeholder="Buscar equipo, coach o persona…" aria-label="Buscar" />
+      <input id="search" type="search" placeholder="Buscar equipo, coach o persona…" aria-label="Buscar" autocomplete="off" />
       <p id="status" class="banner" hidden></p>
     </header>
 
-    <section class="section">
-      <h2>{currentRoundLabel} <span class="count">{fixtures.length} partidos</span></h2>
+    <section class="section" id="sec-results" hidden>
+      <h2>Resultados <span class="count" id="results-count"></span></h2>
+      <ul class="roster" id="results-list"></ul>
+      <p class="results-empty" id="results-empty" hidden>Nadie coincide con la búsqueda.</p>
+    </section>
+
+    <section class="section" id="sec-round">
+      <h2>
+        {currentRoundLabel}
+        <span class="count">{fixtures.length} partidos</span>
+        <span class="pill" id="round-pending" data-tone="pending"></span>
+      </h2>
       <div class="fixtures">
         {fixtures.map((fx) => (
           <div class="fixture" data-fixture={fx.id}>
@@ -68,8 +78,13 @@ const fixtures = currentRound.map(([a, b]) => {
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" id="sec-roster">
       <h2>Jugadores <span class="count">{roster.length}</span></h2>
+      <p class="legend">
+        <span><i class="status-dot" data-state="ok" aria-hidden="true"></i> con WhatsApp</span>
+        <span><i class="status-dot" data-state="partial" aria-hidden="true"></i> solo nombre</span>
+        <span><i class="status-dot" data-state="empty" aria-hidden="true"></i> sin datos</span>
+      </p>
       <ul class="roster">
         {roster.map((c) => (
           <li>
@@ -324,28 +339,61 @@ const fixtures = currentRound.map(([a, b]) => {
     });
   }
 
+  function esc(s: unknown): string {
+    return String(s ?? '').replace(/[&<>"']/g, (m) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]!),
+    );
+  }
+
+  function updateRoundStatus(pending: number, total: number) {
+    const el = document.getElementById('round-pending');
+    if (!el) return;
+    if (pending === 0 && total > 0) {
+      el.textContent = 'ronda completa';
+      el.dataset.tone = 'done';
+    } else {
+      el.textContent = `${pending} pendiente${pending === 1 ? '' : 's'}`;
+      el.dataset.tone = 'pending';
+    }
+  }
+
   function paintFixtures() {
-    document.querySelectorAll<HTMLElement>('.fixture').forEach((el) => {
+    const rows = document.querySelectorAll<HTMLElement>('.fixture');
+    let pending = 0;
+    rows.forEach((el) => {
       const m = mstate.get(el.dataset.fixture!);
       const info = el.querySelector<HTMLElement>('.fx-info')!;
-      const hasScore =
-        m && (m.td_home != null || m.td_away != null);
+      const hasScore = m && (m.td_home != null || m.td_away != null);
       if (hasScore) {
+        const h = m!.td_home ?? 0;
+        const a = m!.td_away ?? 0;
         const cas =
           m!.cas_home != null || m!.cas_away != null
-            ? ` · ${m!.cas_home ?? 0}–${m!.cas_away ?? 0} bajas`
+            ? `<span class="cas">${m!.cas_home ?? 0}–${m!.cas_away ?? 0} bajas</span>`
             : '';
-        info.textContent = `${m!.td_home ?? 0}–${m!.td_away ?? 0}${cas}`;
+        info.innerHTML =
+          `<span class="score">` +
+          `<span class="${h > a ? 'win' : ''}">${h}</span>` +
+          `<span class="dash">–</span>` +
+          `<span class="${a > h ? 'win' : ''}">${a}</span>` +
+          `</span>${cas}`;
         info.dataset.kind = 'result';
-      } else if (m?.scheduled_at) {
-        info.textContent = fmtDateTime(m.scheduled_at);
-        info.dataset.kind = 'date';
+        el.dataset.played = '';
       } else {
-        info.textContent = 'agendar';
-        info.dataset.kind = 'empty';
+        pending++;
+        delete el.dataset.played;
+        if (m?.scheduled_at) {
+          info.textContent = fmtDateTime(m.scheduled_at);
+          info.dataset.kind = 'date';
+        } else {
+          info.textContent = 'agendar';
+          info.dataset.kind = 'empty';
+        }
       }
     });
+    updateRoundStatus(pending, rows.length);
   }
+  updateRoundStatus(document.querySelectorAll('.fixture').length, document.querySelectorAll('.fixture').length);
 
   // ================= Ficha de contacto =================
   const dlg = document.getElementById('detail') as HTMLDialogElement;
@@ -627,21 +675,61 @@ const fixtures = currentRound.map(([a, b]) => {
     el.addEventListener('click', () => openMatch(el.dataset.match!));
   });
 
+  // ================= Buscador (resultados debajo del campo) =================
   const search = document.getElementById('search') as HTMLInputElement;
-  search.addEventListener('input', () => {
+  const secResults = document.getElementById('sec-results') as HTMLElement;
+  const secRound = document.getElementById('sec-round') as HTMLElement;
+  const secRoster = document.getElementById('sec-roster') as HTMLElement;
+  const resultsList = document.getElementById('results-list') as HTMLElement;
+  const resultsCount = document.getElementById('results-count') as HTMLElement;
+  const resultsEmpty = document.getElementById('results-empty') as HTMLElement;
+
+  function rosterItemHTML(c: CoachInfo): string {
+    const r = state.get(c.id);
+    const name = r?.real_name || c.fumbbl_coach;
+    return (
+      `<li><button class="roster-item" type="button" data-id="${esc(c.id)}" data-open="${esc(c.id)}">` +
+      `<span class="status-dot" data-state="${statusOf(c.id)}" aria-hidden="true"></span>` +
+      `<span class="roster-main"><span class="js-name">${esc(name)}</span>` +
+      `<span class="roster-sub">${esc(c.team_name)} · ${esc(c.race)}</span></span>` +
+      `<span class="roster-handle">@${esc(c.fumbbl_coach)}</span></button></li>`
+    );
+  }
+
+  function runSearch() {
     const term = search.value.toLowerCase().trim();
-    document.querySelectorAll<HTMLElement>('.roster-item').forEach((el) => {
-      const c = cmap.get(el.dataset.id!)!;
-      const r = state.get(el.dataset.id!);
-      const hay = (
+    if (!term) {
+      secResults.hidden = true;
+      secRound.hidden = false;
+      secRoster.hidden = false;
+      return;
+    }
+    const matches = COACHES.filter((c) => {
+      const r = state.get(c.id);
+      return (
         c.team_name +
         ' ' +
         c.fumbbl_coach +
         ' ' +
         (r?.real_name ?? '')
-      ).toLowerCase();
-      el.hidden = !!term && !hay.includes(term);
-    });
+      )
+        .toLowerCase()
+        .includes(term);
+    }).sort((a, b) => a.team_name.localeCompare(b.team_name, 'es'));
+
+    resultsList.innerHTML = matches.map(rosterItemHTML).join('');
+    resultsCount.textContent = String(matches.length);
+    resultsEmpty.hidden = matches.length > 0;
+    secResults.hidden = false;
+    secRound.hidden = true;
+    secRoster.hidden = true;
+  }
+
+  search.addEventListener('input', runSearch);
+  search.addEventListener('search', runSearch);
+  resultsList.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-open]');
+    if (btn) openDetail(btn.dataset.open!);
   });
 
   async function load() {
@@ -678,6 +766,7 @@ const fixtures = currentRound.map(([a, b]) => {
 
     if (currentId) openDetail(currentId);
     if (currentFixture) openMatch(currentFixture);
+    if (search.value.trim()) runSearch();
   }
   load();
 </script>
