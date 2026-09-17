@@ -277,6 +277,68 @@ body::before {
   color: var(--ink-soft);
 }
 
+/* ---------- Carrusel de rondas ---------- */
+.rc-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rc-label {
+  font-family: "Bebas Neue", Inter, sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+  min-width: 90px;
+  text-align: center;
+}
+
+.rc-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--blood);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease;
+}
+
+.rc-nav:hover:not(:disabled) { background: var(--blood-tint); }
+.rc-nav:active:not(:disabled) { transform: scale(.94); }
+.rc-nav:disabled { opacity: .35; cursor: default; }
+
+.rc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.rc-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+
+.rc-dot:hover { background: var(--bronze); }
+.rc-dot.active {
+  background: var(--blood-strong);
+  transform: scale(1.25);
+}
+
 /* ---------- Ronda en curso ---------- */
 .fixtures { display: flex; flex-direction: column; gap: 10px; }
 

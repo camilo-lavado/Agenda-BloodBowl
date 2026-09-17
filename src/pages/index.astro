@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { coaches } from '../data/coaches';
 import {
-  currentRound,
+  rounds,
   currentRoundLabel,
   rivalId,
   fixtureId,
@@ -23,11 +23,17 @@ const roster = [...enriched].sort((a, b) =>
   a.team_name.localeCompare(b.team_name, 'es'),
 );
 
-const fixtures = currentRound.map(([a, b]) => {
-  const home = byId.get(a)!;
-  const away = byId.get(b)!;
-  return { home, away, id: fixtureId(a, b) };
-});
+const roundsData = rounds.map((r) => ({
+  key: r.key,
+  label: r.label,
+  fixtures: r.pairs.map(([a, b]) => {
+    const home = byId.get(a)!;
+    const away = byId.get(b)!;
+    return { home, away, id: fixtureId(r.key, a, b) };
+  }),
+}));
+const currentRoundKey = roundsData[roundsData.length - 1].key;
+const fixtures = roundsData[roundsData.length - 1].fixtures;
 ---
 
 <Base>
@@ -78,30 +84,54 @@ const fixtures = currentRound.map(([a, b]) => {
 
     <section class="section" id="sec-round">
       <h2>
-        {currentRoundLabel}
-        <span class="count">{fixtures.length} partidos</span>
+        Partidos
+        <span class="count" id="round-count"></span>
         <span class="pill" id="round-pending" data-tone="pending"></span>
       </h2>
-      <div class="fixtures">
-        {fixtures.map((fx) => (
-          <div class="fixture" data-fixture={fx.id}>
-            <button class="fx-side" type="button" data-id={fx.home.id} data-open={fx.home.id}>
-              <span class="status-dot" data-state="empty" aria-hidden="true"></span>
-              <span class="fx-team">{fx.home.team_name}</span>
-              <span class="fx-coach js-name">{fx.home.fumbbl_coach}</span>
-            </button>
-            <button class="fx-center" type="button" data-match={fx.id}
-              aria-label={`Partido ${fx.home.team_name} contra ${fx.away.team_name}`}>
-              <span class="fx-vs">vs</span>
-              <span class="fx-info">agendar</span>
-            </button>
-            <button class="fx-side right" type="button" data-id={fx.away.id} data-open={fx.away.id}>
-              <span class="status-dot" data-state="empty" aria-hidden="true"></span>
-              <span class="fx-team">{fx.away.team_name}</span>
-              <span class="fx-coach js-name">{fx.away.fumbbl_coach}</span>
-            </button>
+      <div class="round-carousel">
+        <div class="rc-head">
+          <button class="rc-nav rc-prev" type="button" aria-label="Ronda anterior" disabled={roundsData.length < 2}>‹</button>
+          <span class="rc-label" id="round-carousel-label">{currentRoundLabel}</span>
+          <button class="rc-nav rc-next" type="button" aria-label="Ronda siguiente" disabled={roundsData.length < 2}>›</button>
+        </div>
+        <div class="rc-viewport">
+          {roundsData.map((r, i) => (
+            <div class="fixtures round-panel" data-round={r.key} hidden={i !== roundsData.length - 1}>
+              {r.fixtures.map((fx) => (
+                <div class="fixture" data-fixture={fx.id}>
+                  <button class="fx-side" type="button" data-id={fx.home.id} data-open={fx.home.id}>
+                    <span class="status-dot" data-state="empty" aria-hidden="true"></span>
+                    <span class="fx-team">{fx.home.team_name}</span>
+                    <span class="fx-coach js-name">{fx.home.fumbbl_coach}</span>
+                  </button>
+                  <button class="fx-center" type="button" data-match={fx.id}
+                    aria-label={`Partido ${fx.home.team_name} contra ${fx.away.team_name}`}>
+                    <span class="fx-vs">vs</span>
+                    <span class="fx-info">agendar</span>
+                  </button>
+                  <button class="fx-side right" type="button" data-id={fx.away.id} data-open={fx.away.id}>
+                    <span class="status-dot" data-state="empty" aria-hidden="true"></span>
+                    <span class="fx-team">{fx.away.team_name}</span>
+                    <span class="fx-coach js-name">{fx.away.fumbbl_coach}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {roundsData.length > 1 && (
+          <div class="rc-dots" id="rc-dots">
+            {roundsData.map((r, i) => (
+              <button
+                class="rc-dot"
+                type="button"
+                data-round={r.key}
+                aria-label={r.label}
+                aria-current={i === roundsData.length - 1 ? 'true' : undefined}
+              ></button>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </section>
 
@@ -203,7 +233,7 @@ const fixtures = currentRound.map(([a, b]) => {
   <dialog id="match" class="detail">
     <div class="d-box">
       <button class="m-close" type="button" aria-label="Cerrar">✕</button>
-      <p class="d-eyebrow">{currentRoundLabel}</p>
+      <p class="d-eyebrow" id="match-round-label">{currentRoundLabel}</p>
       <h2 class="m-title"></h2>
 
       <label>
@@ -255,16 +285,21 @@ const fixtures = currentRound.map(([a, b]) => {
 
   <script set:html={`
     window.__COACHES__ = ${JSON.stringify(enriched)};
-    window.__FIXTURES__ = ${JSON.stringify(
-      fixtures.map((fx) => ({
-        id: fx.id,
-        home_id: fx.home.id,
-        away_id: fx.away.id,
-        home_team: fx.home.team_name,
-        away_team: fx.away.team_name,
+    window.__ROUNDS__ = ${JSON.stringify(
+      roundsData.map((r) => ({
+        key: r.key,
+        label: r.label,
+        fixtures: r.fixtures.map((fx) => ({
+          id: fx.id,
+          home_id: fx.home.id,
+          away_id: fx.away.id,
+          home_team: fx.home.team_name,
+          away_team: fx.away.team_name,
+        })),
       })),
     )};
     window.__ROUND__ = ${JSON.stringify(currentRoundLabel)};
+    window.__ROUND_KEY__ = ${JSON.stringify(currentRoundKey)};
   `} />
 </Base>
 
@@ -305,6 +340,11 @@ const fixtures = currentRound.map(([a, b]) => {
     home_team: string;
     away_team: string;
   }
+  interface RoundInfo {
+    key: string;
+    label: string;
+    fixtures: FixtureInfo[];
+  }
   interface MatchRow {
     id: string;
     round?: string | null;
@@ -322,10 +362,17 @@ const fixtures = currentRound.map(([a, b]) => {
   }
 
   const COACHES: CoachInfo[] = (window as any).__COACHES__ ?? [];
-  const FIXTURES: FixtureInfo[] = (window as any).__FIXTURES__ ?? [];
+  const ROUNDS: RoundInfo[] = (window as any).__ROUNDS__ ?? [];
   const ROUND: string = (window as any).__ROUND__ ?? '';
+  const ROUND_KEY: string = (window as any).__ROUND_KEY__ ?? '';
+  const FIXTURES: FixtureInfo[] = ROUNDS.flatMap((r) => r.fixtures);
+  const CURRENT_FIXTURES: FixtureInfo[] =
+    ROUNDS.find((r) => r.key === ROUND_KEY)?.fixtures ?? [];
   const cmap = new Map(COACHES.map((c) => [c.id, c]));
   const fmap = new Map(FIXTURES.map((fx) => [fx.id, fx]));
+  const roundOfFixture = new Map<string, RoundInfo>();
+  ROUNDS.forEach((r) => r.fixtures.forEach((fx) => roundOfFixture.set(fx.id, r)));
+  let activeRoundKey = ROUND_KEY;
   const state = new Map<string, Row>();
   const mstate = new Map<string, MatchRow>();
 
@@ -533,7 +580,7 @@ const fixtures = currentRound.map(([a, b]) => {
     const host = document.getElementById('mi-partido') as HTMLElement;
     if (!host) return;
     const fx = me
-      ? FIXTURES.find((f) => f.home_id === me || f.away_id === me)
+      ? CURRENT_FIXTURES.find((f) => f.home_id === me || f.away_id === me)
       : undefined;
     if (!fx || document.getElementById('sec-results')?.hidden === false) {
       host.hidden = true;
@@ -613,8 +660,19 @@ const fixtures = currentRound.map(([a, b]) => {
     }, 1600);
   }
 
-  function updateRoundStatus(pending: number, total: number) {
+  const roundPending = new Map<string, number>();
+  const roundTotal = new Map<string, number>();
+
+  function updateRoundStatus() {
     const el = document.getElementById('round-pending');
+    const countEl = document.getElementById('round-count');
+    const labelEl = document.getElementById('round-carousel-label');
+    const pending = roundPending.get(activeRoundKey) ?? 0;
+    const total = roundTotal.get(activeRoundKey) ?? 0;
+    if (labelEl) {
+      labelEl.textContent = ROUNDS.find((r) => r.key === activeRoundKey)?.label ?? '';
+    }
+    if (countEl) countEl.textContent = total ? `${total} partidos` : '';
     if (!el) return;
     if (pending === 0 && total > 0) {
       el.textContent = 'ronda completa';
@@ -626,44 +684,78 @@ const fixtures = currentRound.map(([a, b]) => {
   }
 
   function paintFixtures() {
-    const rows = document.querySelectorAll<HTMLElement>('.fixture');
-    let pending = 0;
-    rows.forEach((el) => {
-      const m = mstate.get(el.dataset.fixture!);
-      const info = el.querySelector<HTMLElement>('.fx-info')!;
-      const hasScore = m && (m.td_home != null || m.td_away != null);
-      if (hasScore) {
-        const h = m!.td_home ?? 0;
-        const a = m!.td_away ?? 0;
-        const cas =
-          m!.cas_home != null || m!.cas_away != null
-            ? `<span class="cas">${m!.cas_home ?? 0}–${m!.cas_away ?? 0} bajas</span>`
-            : '';
-        info.innerHTML =
-          `<span class="score">` +
-          `<span class="${h > a ? 'win' : ''}">${h}</span>` +
-          `<span class="dash">–</span>` +
-          `<span class="${a > h ? 'win' : ''}">${a}</span>` +
-          `</span>${cas}`;
-        info.dataset.kind = 'result';
-        el.dataset.played = '';
-      } else {
-        pending++;
-        delete el.dataset.played;
-        if (m?.scheduled_at) {
-          info.textContent = fmtDateTime(m.scheduled_at);
-          info.dataset.kind = 'date';
+    document.querySelectorAll<HTMLElement>('.round-panel').forEach((panel) => {
+      const key = panel.dataset.round!;
+      const rows = panel.querySelectorAll<HTMLElement>('.fixture');
+      let pending = 0;
+      rows.forEach((el) => {
+        const m = mstate.get(el.dataset.fixture!);
+        const info = el.querySelector<HTMLElement>('.fx-info')!;
+        const hasScore = m && (m.td_home != null || m.td_away != null);
+        if (hasScore) {
+          const h = m!.td_home ?? 0;
+          const a = m!.td_away ?? 0;
+          const cas =
+            m!.cas_home != null || m!.cas_away != null
+              ? `<span class="cas">${m!.cas_home ?? 0}–${m!.cas_away ?? 0} bajas</span>`
+              : '';
+          info.innerHTML =
+            `<span class="score">` +
+            `<span class="${h > a ? 'win' : ''}">${h}</span>` +
+            `<span class="dash">–</span>` +
+            `<span class="${a > h ? 'win' : ''}">${a}</span>` +
+            `</span>${cas}`;
+          info.dataset.kind = 'result';
+          el.dataset.played = '';
         } else {
-          info.textContent = 'agendar';
-          info.dataset.kind = 'empty';
+          pending++;
+          delete el.dataset.played;
+          if (m?.scheduled_at) {
+            info.textContent = fmtDateTime(m.scheduled_at);
+            info.dataset.kind = 'date';
+          } else {
+            info.textContent = 'agendar';
+            info.dataset.kind = 'empty';
+          }
         }
-      }
+      });
+      roundPending.set(key, pending);
+      roundTotal.set(key, rows.length);
     });
-    updateRoundStatus(pending, rows.length);
+    updateRoundStatus();
     renderStandings();
     renderMyMatch();
   }
-  updateRoundStatus(document.querySelectorAll('.fixture').length, document.querySelectorAll('.fixture').length);
+
+  function showRound(key: string) {
+    if (!ROUNDS.some((r) => r.key === key)) return;
+    activeRoundKey = key;
+    document.querySelectorAll<HTMLElement>('.round-panel').forEach((p) => {
+      p.hidden = p.dataset.round !== key;
+    });
+    document.querySelectorAll<HTMLElement>('.rc-dot').forEach((d) => {
+      const active = d.dataset.round === key;
+      d.classList.toggle('active', active);
+      if (active) d.setAttribute('aria-current', 'true');
+      else d.removeAttribute('aria-current');
+    });
+    updateRoundStatus();
+  }
+
+  function stepRound(delta: number) {
+    const idx = ROUNDS.findIndex((r) => r.key === activeRoundKey);
+    if (idx === -1) return;
+    const next = ROUNDS[(idx + delta + ROUNDS.length) % ROUNDS.length];
+    showRound(next.key);
+  }
+
+  document.querySelector('.rc-prev')?.addEventListener('click', () => stepRound(-1));
+  document.querySelector('.rc-next')?.addEventListener('click', () => stepRound(1));
+  document.getElementById('rc-dots')?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('.rc-dot');
+    if (btn?.dataset.round) showRound(btn.dataset.round);
+  });
+  paintFixtures();
 
   // ================= Ficha de contacto =================
   const dlg = document.getElementById('detail') as HTMLDialogElement;
@@ -909,6 +1001,10 @@ const fixtures = currentRound.map(([a, b]) => {
     m.title.textContent = `${fx.home_team} vs ${fx.away_team}`;
     m.homeLabels.forEach((el) => (el.textContent = fx.home_team));
     m.awayLabels.forEach((el) => (el.textContent = fx.away_team));
+    const roundLabelEl = document.getElementById('match-round-label');
+    if (roundLabelEl) {
+      roundLabelEl.textContent = roundOfFixture.get(fixtureId)?.label ?? ROUND;
+    }
 
     const r = mstate.get(fixtureId);
     m.datetime.value = toLocalInput(r?.scheduled_at ?? null);
@@ -950,7 +1046,7 @@ const fixtures = currentRound.map(([a, b]) => {
 
     const payload = {
       id: currentFixture,
-      round: ROUND,
+      round: roundOfFixture.get(currentFixture)?.label ?? ROUND,
       home_id: fx.home_id,
       away_id: fx.away_id,
       home_team: fx.home_team,
