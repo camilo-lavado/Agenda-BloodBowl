@@ -51,21 +51,40 @@ function invert(map) {
 }
 
 // -------- FUMBBL: pasar la protección anti-bots (Anubis) --------
-async function openPastAnubis(page, url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  let ok = await page.locator('.heading', { hasText: 'Schedule' }).count();
-  if (!ok && url === TOURNAMENT_URL) {
-    // primera vez: Anubis tarda unos segundos en resolver su reto
-    await page.waitForTimeout(7000);
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+// Reintenta con esperas crecientes: en un runner de CI (IP de datacenter,
+// CPU compartida) el reto de Anubis puede tardar bastante más que en una
+// máquina normal.
+async function openPastAnubis(page, url, { checkSelector, maxAttempts = 4 } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    } catch (err) {
+      lastErr = err;
+      console.warn(`  intento ${attempt}/${maxAttempts}: goto falló (${err.message.split('\n')[0]})`);
+      await page.waitForTimeout(5000 * attempt);
+      continue;
+    }
+    if (!checkSelector) return; // páginas sin marcador conocido (fichas de partido)
+    const ok = await page.locator(checkSelector).count();
+    if (ok) return;
+    lastErr = new Error('checkSelector no encontrado tras cargar la página');
+    await page.waitForTimeout(5000 * attempt);
   }
+  throw lastErr ?? new Error('No se pudo abrir ' + url);
 }
 
 // -------- FUMBBL: leer el calendario completo --------
 async function fetchSchedule(page) {
-  await openPastAnubis(page, TOURNAMENT_URL);
-  const hasSchedule = await page.locator('.heading', { hasText: 'Schedule' }).count();
-  if (!hasSchedule) throw new Error('No se pudo pasar la protección anti-bots de FUMBBL (Anubis).');
+  try {
+    await openPastAnubis(page, TOURNAMENT_URL, { checkSelector: '.heading:has-text("Schedule")' });
+  } catch (err) {
+    try {
+      await page.screenshot({ path: path.join(__dirname, 'debug-anubis.png'), fullPage: true });
+      writeFileSync(path.join(__dirname, 'debug-anubis.html'), await page.content());
+    } catch {}
+    throw new Error(`No se pudo pasar la protección anti-bots de FUMBBL (Anubis): ${err.message}`);
+  }
 
   return page.evaluate(() => {
     const headings = [...document.querySelectorAll('.heading')];
@@ -108,7 +127,10 @@ async function fetchSchedule(page) {
 // "cas" en la fila TOTALS de la tabla de un equipo = bajas que HIZO ese
 // equipo en ese partido (no las que sufrió).
 async function fetchCasualties(page, matchId) {
-  await openPastAnubis(page, `${BASE_URL}/p/match?id=${matchId}`);
+  await openPastAnubis(page, `${BASE_URL}/p/match?id=${matchId}`, {
+    checkSelector: '.performancecontainer.home',
+    maxAttempts: 3,
+  });
   return page.evaluate(() => {
     const casOf = (side) => {
       const foot = document.querySelector(`.performancecontainer.${side} .player.foot`);
@@ -198,8 +220,16 @@ async function main() {
   const nameToId = loadCoachNameToId();
   const idToName = invert(nameToId);
 
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ userAgent: UA });
+  const browser = await chromium.launch({
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
+  const page = await browser.newPage({
+    userAgent: UA,
+    viewport: { width: 1366, height: 900 },
+    locale: 'es-CL',
+  });
+  page.setDefaultNavigationTimeout(60000);
+  page.setDefaultTimeout(60000);
 
   let scraped;
   try {
