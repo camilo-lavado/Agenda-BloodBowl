@@ -574,6 +574,18 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     document.body.classList.toggle('has-me', !!me);
     renderMyMatch();
     paintList();
+    paintRoundDots();
+  }
+
+  // Marca en los puntos del carrusel las rondas en las que juego
+  function paintRoundDots() {
+    document.querySelectorAll<HTMLElement>('.rc-dot').forEach((dot) => {
+      const key = dot.dataset.round;
+      const round = ROUNDS.find((r) => r.key === key);
+      const playsIn =
+        !!me && !!round && round.fixtures.some((f) => f.home_id === me || f.away_id === me);
+      dot.classList.toggle('has-me', playsIn);
+    });
   }
 
   function renderMyMatch() {

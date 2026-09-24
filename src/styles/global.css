@@ -339,6 +339,14 @@ body::before {
   transform: scale(1.25);
 }
 
+/* Ronda en la que juego (según "Soy") */
+.rc-dot.has-me {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--blood-strong);
+}
+.rc-dot.has-me.active {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--bronze);
+}
+
 /* ---------- Ronda en curso ---------- */
 .fixtures { display: flex; flex-direction: column; gap: 10px; }
 
@@ -417,6 +425,18 @@ body::before {
 
 .fx-center:hover { background: var(--blood-tint); }
 .fx-center:hover .fx-info[data-kind="empty"] { color: var(--blood); }
+
+/* Partido en el que participo (jugado o por jugar): se resalta con una franja */
+.fixture:has(.fx-side.is-me)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--blood-strong), var(--bronze));
+  z-index: 1;
+}
 
 /* Partido con resultado: se resalta en verde */
 .fixture[data-played] { border-color: color-mix(in srgb, var(--ok) 42%, var(--line)); }
