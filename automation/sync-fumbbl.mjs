@@ -177,7 +177,10 @@ async function fetchMatchDetails(page, matchId, homeId, awayId) {
         return null;
       };
       const casualtiesOf = (side, teamId) => {
-        const container = document.querySelector(`.performancecontainer.${side}`);
+        // Las líneas "#N Jugador – Estado" son texto suelto dentro de
+        // .homeperf/.awayperf (el contenedor GRANDE), no dentro del
+        // .performancecontainer más chico que está anidado adentro.
+        const container = document.querySelector(`.${side}perf`);
         if (!container || !teamId) return [];
         const out = [];
         const re = /#\d+\s+([^–<]+?)\s*–\s*([^<]+)/g;
@@ -255,7 +258,7 @@ function ensureRoundInSchedule(key, label, pairs) {
 // -------- Supabase --------
 async function supabaseGetExisting() {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,mvp_home,mvp_away,played_at,fumbbl_match_id`,
+    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,mvp_home,mvp_away,played_at,fumbbl_match_id,casualties`,
     { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
   );
   if (!res.ok) throw new Error(`Supabase GET falló: ${res.status} ${await res.text()}`);
@@ -263,21 +266,33 @@ async function supabaseGetExisting() {
   return new Map(rows.map((r) => [r.id, r]));
 }
 
+// PostgREST exige que, en un upsert por lote, TODOS los objetos tengan
+// exactamente las mismas claves. Como cada partido puede traer un set
+// distinto de columnas (según qué se haya podido leer), se agrupan por
+// firma de claves y se manda un POST por grupo en vez de uno solo.
 async function supabaseUpsertMatches(payloads) {
   if (!payloads.length) return;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      // Solo se pisan las columnas incluidas en cada objeto: "nota" y
-      // "fecha/hora" no van en el payload, así que Supabase no las toca.
-      Prefer: 'resolution=merge-duplicates',
-    },
-    body: JSON.stringify(payloads),
-  });
-  if (!res.ok) throw new Error(`Supabase upsert falló: ${res.status} ${await res.text()}`);
+  const groups = new Map();
+  for (const p of payloads) {
+    const sig = Object.keys(p).sort().join(',');
+    if (!groups.has(sig)) groups.set(sig, []);
+    groups.get(sig).push(p);
+  }
+  for (const group of groups.values()) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        // Solo se pisan las columnas incluidas en cada objeto: "nota" y
+        // "fecha/hora agendada" no van en el payload, así que Supabase no las toca.
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(group),
+    });
+    if (!res.ok) throw new Error(`Supabase upsert falló: ${res.status} ${await res.text()}`);
+  }
 }
 
 // -------- main --------
@@ -352,7 +367,9 @@ async function main() {
           (details.cas_away != null && prev.cas_away !== details.cas_away) ||
           (details.mvp_home != null && prev.mvp_home !== details.mvp_home) ||
           (details.mvp_away != null && prev.mvp_away !== details.mvp_away) ||
-          (details.played_at != null && prev.played_at !== details.played_at);
+          (details.played_at != null && prev.played_at !== details.played_at) ||
+          (details.casualties != null &&
+            JSON.stringify(prev.casualties ?? []) !== JSON.stringify(details.casualties));
 
         if (changed) {
           const payload = {
