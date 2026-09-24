@@ -426,16 +426,43 @@ body::before {
 .fx-center:hover { background: var(--blood-tint); }
 .fx-center:hover .fx-info[data-kind="empty"] { color: var(--blood); }
 
-/* Partido en el que participo (jugado o por jugar): se resalta con una franja */
+/* Partido en el que participo (jugado o por jugar): se resalta bien */
+.fixture:has(.fx-side.is-me) {
+  border: 2px solid var(--blood-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blood) 16%, var(--card)), var(--card-2));
+  box-shadow: var(--shadow), 0 0 0 3px color-mix(in srgb, var(--blood) 16%, transparent);
+}
+
 .fixture:has(.fx-side.is-me)::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 5px;
   background: linear-gradient(180deg, var(--blood-strong), var(--bronze));
   z-index: 1;
+}
+
+/* deja sitio para que el rótulo no tape el nombre del equipo local */
+.fixture:has(.fx-side.is-me) > .fx-side:first-child { padding-top: 25px; }
+
+.fixture:has(.fx-side.is-me)::after {
+  content: "Tu partido";
+  position: absolute;
+  inset: auto auto auto 16px;
+  top: -1px;
+  width: max-content;
+  height: auto;
+  background: var(--blood-strong);
+  color: #fff8f0;
+  font: 800 10px/1.8 Inter, system-ui, sans-serif;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 0 9px;
+  border-radius: 999px;
+  z-index: 2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .35);
 }
 
 /* Partido con resultado: se resalta en verde */

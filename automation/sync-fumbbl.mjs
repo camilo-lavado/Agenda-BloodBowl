@@ -4,9 +4,12 @@
 //  2. Lee TODAS las rondas del calendario (jugadas y por jugar).
 //  3. Si hay una ronda que no está en src/data/schedule.ts, la añade ahí
 //     (eso sí necesita un commit + deploy para que se vea).
-//  4. Sube a Supabase los resultados (TD) que falten o hayan cambiado,
-//     sin tocar nunca las bajas/nota/fecha que la gente ya haya escrito
-//     a mano (esos campos no van en el payload -> Supabase no los toca).
+//  4. Para cada partido ya cerrado (con marcador), entra a su ficha de
+//     partido en FUMBBL y lee también las bajas (cas) que hizo cada equipo.
+//  5. Sube a Supabase el marcador (TD) y las bajas (cas) de esos partidos.
+//     Un partido cerrado en FUMBBL no cambia nunca, así que ese dato manda
+//     siempre y pisa lo que hubiera antes. "Nota" y "Fecha/hora" son cosas
+//     que solo existen en la web (FUMBBL no las tiene) y nunca se tocan.
 //
 // Uso: SUPABASE_URL=... SUPABASE_ANON_KEY=... node sync-fumbbl.mjs
 
@@ -19,7 +22,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCHEDULE_PATH = path.join(__dirname, '..', 'src', 'data', 'schedule.ts');
 const COACHES_PATH = path.join(__dirname, '..', 'src', 'data', 'coaches.ts');
 
-const TOURNAMENT_URL = 'https://fumbbl.com/p/group?op=view&group=15266&p=tournaments';
+const BASE_URL = 'https://fumbbl.com';
+const TOURNAMENT_URL = `${BASE_URL}/p/group?op=view&group=15266&p=tournaments`;
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
@@ -46,58 +50,75 @@ function invert(map) {
   return new Map([...map].map(([name, id]) => [id, name]));
 }
 
-// -------- FUMBBL: leer el calendario completo con un navegador real --------
-async function fetchSchedule() {
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ userAgent: UA });
-  try {
-    await page.goto(TOURNAMENT_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    let hasSchedule = await page.locator('.heading', { hasText: 'Schedule' }).count();
-    if (!hasSchedule) {
-      // Anubis (protección anti-bots) resuelve su reto solo tras unos segundos.
-      await page.waitForTimeout(7000);
-      await page.goto(TOURNAMENT_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      hasSchedule = await page.locator('.heading', { hasText: 'Schedule' }).count();
-    }
-    if (!hasSchedule) {
-      throw new Error('No se pudo pasar la protección anti-bots de FUMBBL (Anubis).');
-    }
-
-    return await page.evaluate(() => {
-      const headings = [...document.querySelectorAll('.heading')];
-      const scheduleHeading = headings.find((e) => e.textContent.trim() === 'Schedule');
-      const table = scheduleHeading?.nextElementSibling;
-      if (!table || table.tagName !== 'TABLE') return [];
-
-      const rounds = [];
-      let current = null;
-      for (const tr of table.querySelectorAll('tr')) {
-        const roundDiv = tr.querySelector('td[colspan] div');
-        if (roundDiv && /^Round\s+\d+/i.test(roundDiv.textContent.trim())) {
-          current = { label: roundDiv.textContent.trim(), matches: [] };
-          rounds.push(current);
-          continue;
-        }
-        if (!current) continue;
-        tr.querySelectorAll('.matchCell').forEach((cell) => {
-          const home = cell.querySelector('.team.home a')?.textContent.trim();
-          const away = cell.querySelector('.team.away a')?.textContent.trim();
-          if (!home || !away) return;
-          const sh = cell.querySelector('.score.home')?.textContent.trim();
-          const sa = cell.querySelector('.score.away')?.textContent.trim();
-          current.matches.push({
-            home,
-            away,
-            td_home: sh ? Number(sh) : null,
-            td_away: sa ? Number(sa) : null,
-          });
-        });
-      }
-      return rounds;
-    });
-  } finally {
-    await browser.close();
+// -------- FUMBBL: pasar la protección anti-bots (Anubis) --------
+async function openPastAnubis(page, url) {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  let ok = await page.locator('.heading', { hasText: 'Schedule' }).count();
+  if (!ok && url === TOURNAMENT_URL) {
+    // primera vez: Anubis tarda unos segundos en resolver su reto
+    await page.waitForTimeout(7000);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   }
+}
+
+// -------- FUMBBL: leer el calendario completo --------
+async function fetchSchedule(page) {
+  await openPastAnubis(page, TOURNAMENT_URL);
+  const hasSchedule = await page.locator('.heading', { hasText: 'Schedule' }).count();
+  if (!hasSchedule) throw new Error('No se pudo pasar la protección anti-bots de FUMBBL (Anubis).');
+
+  return page.evaluate(() => {
+    const headings = [...document.querySelectorAll('.heading')];
+    const scheduleHeading = headings.find((e) => e.textContent.trim() === 'Schedule');
+    const table = scheduleHeading?.nextElementSibling;
+    if (!table || table.tagName !== 'TABLE') return [];
+
+    const rounds = [];
+    let current = null;
+    for (const tr of table.querySelectorAll('tr')) {
+      const roundDiv = tr.querySelector('td[colspan] div');
+      if (roundDiv && /^Round\s+\d+/i.test(roundDiv.textContent.trim())) {
+        current = { label: roundDiv.textContent.trim(), matches: [] };
+        rounds.push(current);
+        continue;
+      }
+      if (!current) continue;
+      tr.querySelectorAll('.matchCell').forEach((cell) => {
+        const home = cell.querySelector('.team.home a')?.textContent.trim();
+        const away = cell.querySelector('.team.away a')?.textContent.trim();
+        if (!home || !away) return;
+        const sh = cell.querySelector('.score.home')?.textContent.trim();
+        const sa = cell.querySelector('.score.away')?.textContent.trim();
+        const reportHref = cell.querySelector('a[href*="p/match?id="]')?.getAttribute('href') || '';
+        const idMatch = reportHref.match(/id=(\d+)/);
+        current.matches.push({
+          home,
+          away,
+          td_home: sh ? Number(sh) : null,
+          td_away: sa ? Number(sa) : null,
+          matchId: idMatch ? idMatch[1] : null,
+        });
+      });
+    }
+    return rounds;
+  });
+}
+
+// -------- FUMBBL: bajas (cas) de un partido ya cerrado --------
+// "cas" en la fila TOTALS de la tabla de un equipo = bajas que HIZO ese
+// equipo en ese partido (no las que sufrió).
+async function fetchCasualties(page, matchId) {
+  await openPastAnubis(page, `${BASE_URL}/p/match?id=${matchId}`);
+  return page.evaluate(() => {
+    const casOf = (side) => {
+      const foot = document.querySelector(`.performancecontainer.${side} .player.foot`);
+      const cell = foot?.querySelector('.cas');
+      if (!cell) return null;
+      const txt = cell.textContent.trim();
+      return txt === '' || txt === '-' ? 0 : Number(txt);
+    };
+    return { cas_home: casOf('home'), cas_away: casOf('away') };
+  });
 }
 
 // FUMBBL a veces trunca nombres largos en la celda del calendario
@@ -145,10 +166,11 @@ function ensureRoundInSchedule(key, label, pairs) {
 }
 
 // -------- Supabase --------
-async function supabaseGetExistingScores() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away`, {
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-  });
+async function supabaseGetExisting() {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away`,
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
+  );
   if (!res.ok) throw new Error(`Supabase GET falló: ${res.status} ${await res.text()}`);
   const rows = await res.json();
   return new Map(rows.map((r) => [r.id, r]));
@@ -162,8 +184,8 @@ async function supabaseUpsertMatches(payloads) {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
-      // Solo se pisan las columnas incluidas en cada objeto: bajas/nota/fecha
-      // puestas a mano en la web NO se tocan.
+      // Solo se pisan las columnas incluidas en cada objeto: "nota" y
+      // "fecha/hora" no van en el payload, así que Supabase no las toca.
       Prefer: 'resolution=merge-duplicates',
     },
     body: JSON.stringify(payloads),
@@ -175,38 +197,59 @@ async function supabaseUpsertMatches(payloads) {
 async function main() {
   const nameToId = loadCoachNameToId();
   const idToName = invert(nameToId);
-  const scraped = await fetchSchedule();
-  if (!scraped.length) {
-    console.error('No se extrajo ninguna ronda del calendario; no se escribe nada.');
-    process.exit(1);
-  }
 
-  const existing = await supabaseGetExistingScores();
-  const matchPayloads = [];
-  let scheduleChanged = false;
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ userAgent: UA });
 
-  for (const round of scraped) {
-    const key = roundKeyFromLabel(round.label);
-    if (!key) continue;
-    const label = `Ronda ${key.slice(1)}`;
+  let scraped;
+  try {
+    scraped = await fetchSchedule(page);
+    if (!scraped.length) throw new Error('No se extrajo ninguna ronda del calendario.');
 
-    const pairs = [];
-    let allMapped = true;
-    for (const m of round.matches) {
-      const homeId = resolveTeamId(m.home, nameToId);
-      const awayId = resolveTeamId(m.away, nameToId);
-      if (!homeId || !awayId) {
-        console.warn(`⚠️  Equipo sin mapear en ${round.label}: "${m.home}" vs "${m.away}"`);
-        allMapped = false;
-        continue;
-      }
-      pairs.push([homeId, awayId]);
+    const existing = await supabaseGetExisting();
+    const matchPayloads = [];
+    let scheduleChanged = false;
 
-      if (m.td_home != null && m.td_away != null) {
+    for (const round of scraped) {
+      const key = roundKeyFromLabel(round.label);
+      if (!key) continue;
+      const label = `Ronda ${key.slice(1)}`;
+
+      const pairs = [];
+      let allMapped = true;
+      for (const m of round.matches) {
+        const homeId = resolveTeamId(m.home, nameToId);
+        const awayId = resolveTeamId(m.away, nameToId);
+        if (!homeId || !awayId) {
+          console.warn(`⚠️  Equipo sin mapear en ${round.label}: "${m.home}" vs "${m.away}"`);
+          allMapped = false;
+          continue;
+        }
+        pairs.push([homeId, awayId]);
+
+        const isClosed = m.td_home != null && m.td_away != null;
+        if (!isClosed) continue;
+
+        let cas = { cas_home: null, cas_away: null };
+        if (m.matchId) {
+          try {
+            cas = await fetchCasualties(page, m.matchId);
+          } catch (err) {
+            console.warn(`⚠️  No pude leer bajas del partido ${m.matchId} (${m.home} vs ${m.away}): ${err.message}`);
+          }
+        }
+
         const id = fixtureId(key, homeId, awayId);
         const prev = existing.get(id);
-        if (!prev || prev.td_home !== m.td_home || prev.td_away !== m.td_away) {
-          matchPayloads.push({
+        const changed =
+          !prev ||
+          prev.td_home !== m.td_home ||
+          prev.td_away !== m.td_away ||
+          (cas.cas_home != null && prev.cas_home !== cas.cas_home) ||
+          (cas.cas_away != null && prev.cas_away !== cas.cas_away);
+
+        if (changed) {
+          const payload = {
             id,
             round: label,
             home_id: homeId,
@@ -215,24 +258,30 @@ async function main() {
             away_team: idToName.get(awayId) ?? m.away,
             td_home: m.td_home,
             td_away: m.td_away,
-          });
+          };
+          // Solo se incluyen (y por lo tanto se escriben) si se pudieron leer.
+          if (cas.cas_home != null) payload.cas_home = cas.cas_home;
+          if (cas.cas_away != null) payload.cas_away = cas.cas_away;
+          matchPayloads.push(payload);
         }
+      }
+
+      if (allMapped && pairs.length && ensureRoundInSchedule(key, label, pairs)) {
+        scheduleChanged = true;
+        console.log(`➕ Ronda nueva añadida a schedule.ts: ${label}`);
       }
     }
 
-    if (allMapped && pairs.length && ensureRoundInSchedule(key, label, pairs)) {
-      scheduleChanged = true;
-      console.log(`➕ Ronda nueva añadida a schedule.ts: ${label}`);
+    await supabaseUpsertMatches(matchPayloads);
+    if (matchPayloads.length) {
+      console.log(`✅ Partidos nuevos/actualizados en Supabase: ${matchPayloads.length}`);
+    } else {
+      console.log('Sin resultados nuevos que subir.');
     }
+    if (!scheduleChanged) console.log('Sin rondas nuevas en el calendario.');
+  } finally {
+    await browser.close();
   }
-
-  await supabaseUpsertMatches(matchPayloads);
-  if (matchPayloads.length) {
-    console.log(`✅ Resultados nuevos/actualizados en Supabase: ${matchPayloads.length}`);
-  } else {
-    console.log('Sin resultados nuevos que subir.');
-  }
-  if (!scheduleChanged) console.log('Sin rondas nuevas en el calendario.');
 }
 
 main().catch((err) => {

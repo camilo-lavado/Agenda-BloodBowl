@@ -96,8 +96,10 @@ real (la página tiene protección anti-bots que bloquea un `curl`/`fetch`
 normal) y:
 
 - Si hay una **ronda nueva** que no está en `schedule.ts`, la añade y hace commit + push (dispara el redeploy).
-- Sube a Supabase los **resultados (TD)** que falten o hayan cambiado, sin tocar nunca las bajas, la nota o la fecha
-  que alguien haya puesto a mano en la web (esos campos no se envían, así que Supabase no los pisa).
+- Para cada partido ya **cerrado** en FUMBBL (con marcador), entra a su ficha de partido y sube a Supabase el
+  **resultado (TD) y las bajas (Cas)**. Un partido cerrado en FUMBBL no cambia nunca, así que ese dato manda
+  siempre y pisa lo que hubiera antes (incluida una carga a mano equivocada). **Nota** y **fecha/hora** son
+  cosas que solo existen en la web —FUMBBL no las tiene— y esas nunca se tocan.
 
 El script vive en [`automation/`](automation), separado del sitio (Astro) para no meterle Playwright al build de la web.
 
@@ -110,13 +112,6 @@ añade dos *repository secrets* con los mismos valores que tu `.env`:
 Con eso el workflow ya corre solo. También se puede lanzar a mano desde la pestaña
 **Actions → Sync FUMBBL → Run workflow** (por ejemplo, justo después de que salga una ronda,
 en vez de esperar a la corrida diaria).
-
-> **Bajas (Cas):** por ahora quedan fuera de la sincronización automática. La ficha de
-> partido de FUMBBL sí tiene un dato de bajas por equipo, pero no logré confirmar con
-> certeza qué representa exactamente (no cuadraba con partidos ya cargados a mano) — y
-> escribir un número de bajas equivocado sería peor que no escribir nada, porque afecta
-> el desempate de la clasificación. Las bajas se siguen cargando a mano en la ficha del
-> partido, como hasta ahora.
 
 ## Estructura
 
