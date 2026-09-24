@@ -1747,3 +1747,17 @@ button, .wa-btn { border-radius: 6px; }
 }
 .section > h2 .chev { color: var(--gold); width: 18px; }
 .d-box { border-radius: 12px 12px 0 0; } @media (min-width: 640px) { .d-box { border-radius: 10px; } }
+@media (prefers-color-scheme: dark) {
+  :root { --blood: #e2635d; --blood-strong: #ee746e; }
+}
+
+/* Distintivos: equipo / coach / jugador */
+.ent { display: inline-flex; align-items: center; gap: .4em; max-width: 100%; }
+.ent .ico { width: .95em; height: .95em; opacity: .9; }
+.ent-team .ico { color: var(--blood); }
+.ent-coach { font-weight: 500; }
+.ent-coach .ico { color: var(--ink-soft); }
+.ent-player .ico { color: var(--bronze); }
+.leader-name small, .st-coach, .fallen-txt small { display: flex; margin-top: 2px; }
+.st-team, .st-coach { display: flex; }
+.fallen-txt small { display: flex; flex-wrap: wrap; gap: 0 .5em; align-items: center; }

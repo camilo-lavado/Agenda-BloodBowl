@@ -26,6 +26,8 @@ import x from 'lucide-static/icons/x.svg?raw';
 import check from 'lucide-static/icons/check.svg?raw';
 import chevronRight from 'lucide-static/icons/chevron-right.svg?raw';
 import chevronLeft from 'lucide-static/icons/chevron-left.svg?raw';
+import user from 'lucide-static/icons/user.svg?raw';
+import shirt from 'lucide-static/icons/shirt.svg?raw';
 import externalLink from 'lucide-static/icons/external-link.svg?raw';
 
 const RAW = {
@@ -34,7 +36,7 @@ const RAW = {
   'heart-crack': heartCrack, bandage, hospital, lock,
   'triangle-alert': triangleAlert, calendar, x, check,
   'chevron-right': chevronRight, 'chevron-left': chevronLeft,
-  'external-link': externalLink,
+  'external-link': externalLink, user, shirt,
 } as const;
 
 export type IconName = keyof typeof RAW;
