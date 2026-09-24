@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import '../styles/themes.css';
 
 interface Props {
   title?: string;
@@ -13,7 +14,7 @@ const {
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme={import.meta.env.PUBLIC_THEME ?? 'gridiron'}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

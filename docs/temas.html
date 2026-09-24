@@ -1,0 +1,85 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Temas · vista previa</title>
+<style>/* =====================================================================
+   Plantillas de tema (10). Cambian SOLO color y textura de la cancha;
+   la estructura, tipografía y componentes se mantienen ("mismo estilo").
+   Uso:  <html data-theme="gridiron">   (sin atributo = Gridiron por defecto)
+   Tokens que define cada tema:
+     --panel / --panel-ink : barras oscuras (cabecera, rótulos, podio)
+     --blood / --blood-strong : acento principal (rojo en Gridiron)
+     --gold : acento secundario (números, detalles)
+     --ta / --tb : franjas de la cancha (modo claro)
+     --turf-line : color de líneas de la cancha
+     --ez : tinte de la zona de anotación
+   El modo oscuro deriva --turf-a/--turf-b oscureciendo --ta/--tb.
+   ===================================================================== */
+
+[data-theme="gridiron"] { /* por defecto: césped clásico */
+  --panel:#0e1c14; --panel-ink:#f4f1e6; --blood:#a3231f; --blood-strong:#b92c27;
+  --gold:#d4a437; --ta:#2b6b36; --tb:#266130; --turf-line:rgba(255,255,255,.55); --ez:rgba(138,31,31,.55);
+}
+[data-theme="nuffle"] { /* cuero y pergamino, Blood Bowl clásico */
+  --panel:#1a1109; --panel-ink:#f3e9d2; --blood:#a8321f; --blood-strong:#c23d27;
+  --gold:#c9a227; --ta:#55692f; --tb:#4c5f2a; --turf-line:rgba(243,233,210,.5); --ez:rgba(120,50,20,.6);
+}
+[data-theme="caos"] { /* yermos del caos: ceniza y brasas */
+  --panel:#120808; --panel-ink:#f2e6e1; --blood:#d0361a; --blood-strong:#ea4a2a;
+  --gold:#e0902b; --ta:#3a2f2d; --tb:#332927; --turf-line:rgba(224,144,43,.5); --ez:rgba(208,54,26,.55);
+}
+[data-theme="elfos"] { /* reinos élficos: marfil, verde azulado, plata */
+  --panel:#0b1f2a; --panel-ink:#eef6f7; --blood:#137a6f; --blood-strong:#2bb3a3;
+  --gold:#c7d5df; --ta:#2f7361; --tb:#2a6a58; --turf-line:rgba(238,246,247,.55); --ez:rgba(31,156,143,.5);
+}
+[data-theme="no-muertos"] { /* cripta: violeta y hueso */
+  --panel:#140f1e; --panel-ink:#efeaf7; --blood:#7a45c0; --blood-strong:#a071e6;
+  --gold:#cfd08a; --ta:#33402f; --tb:#2d392a; --turf-line:rgba(207,208,138,.4); --ez:rgba(138,86,208,.5);
+}
+[data-theme="orcos"] { /* orcos y goblins: verde brillante y naranja */
+  --panel:#10200f; --panel-ink:#f1f5e4; --blood:#b84a08; --blood-strong:#ff7a1a;
+  --gold:#b6d94c; --ta:#3f7d2b; --tb:#397325; --turf-line:rgba(241,245,228,.55); --ez:rgba(224,98,15,.55);
+}
+[data-theme="enanos"] { /* forja enana: pizarra y cobre */
+  --panel:#14171c; --panel-ink:#eceff3; --blood:#b34d14; --blood-strong:#dc6d2c;
+  --gold:#e0b15a; --ta:#454c56; --tb:#3e444d; --turf-line:rgba(224,177,90,.45); --ez:rgba(194,90,31,.5);
+}
+[data-theme="hielo"] { /* yermos helados: hielo y azul */
+  --panel:#0c1a2b; --panel-ink:#eaf3fb; --blood:#1f6fbf; --blood-strong:#4aa3ff;
+  --gold:#dfeaf5; --ta:#8fb7d4; --tb:#84acca; --turf-line:rgba(255,255,255,.65); --ez:rgba(47,131,214,.5);
+}
+[data-theme="desierto"] { /* copa del desierto: arena y terracota */
+  --panel:#2a1c0c; --panel-ink:#f8eed8; --blood:#b8391f; --blood-strong:#d24a2b;
+  --gold:#f0c05a; --ta:#c2a15e; --tb:#b89857; --turf-line:rgba(42,28,12,.4); --ez:rgba(184,57,31,.5);
+}
+[data-theme="nocturno"] { /* partido nocturno: neón bajo focos */
+  --panel:#05070d; --panel-ink:#f0f3fa; --blood:#d01a6c; --blood-strong:#ff2e88;
+  --gold:#22e6c3; --ta:#123a28; --tb:#0f3323; --turf-line:rgba(34,230,195,.35); --ez:rgba(224,31,120,.5);
+}
+
+/* Franjas de cancha derivadas: claro = tal cual; oscuro = 45 % del color + negro */
+[data-theme] { --turf-a: var(--ta); --turf-b: var(--tb); }
+@media (prefers-color-scheme: dark) {
+  [data-theme] {
+    --turf-a: color-mix(in srgb, var(--ta) 45%, #000);
+    --turf-b: color-mix(in srgb, var(--tb) 45%, #000);
+  }
+}
+
+body{margin:0;padding:20px;background:#111;color:#eee;font:14px/1.4 system-ui,sans-serif}h1{font:700 28px "Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.th code{display:block;margin-top:6px;color:#9ab}
+.field{padding:14px;border-radius:8px;background:repeating-linear-gradient(to bottom,var(--turf-a) 0 34px,var(--turf-b) 34px 68px);box-shadow:inset 0 0 0 2px var(--turf-line)}
+.hd{background:var(--panel);color:var(--panel-ink);padding:12px;border-radius:6px;border-top:3px solid var(--gold);margin-bottom:10px}
+.hd small{color:var(--gold);letter-spacing:.2em;font-size:10px}.hd h3{margin:4px 0 8px;font:700 24px "Arial Narrow",sans-serif;text-transform:uppercase}
+.tag{background:var(--blood-strong);color:#fff;padding:2px 8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.row{background:#f8f6ef;color:#101a14;padding:6px 10px;display:flex;gap:8px;border-radius:4px;margin-bottom:4px}.row.alt{background:#efeadb}.row b{width:14px}.row em{margin-left:auto;font-style:normal;font-weight:700;color:var(--blood)}
+.news{background:var(--gold);color:#1a1204;padding:6px 10px;border-radius:4px;font-weight:600;font-size:12px;display:flex;gap:8px}.news i{background:var(--blood-strong);color:#fff;font-style:normal;padding:0 6px;font-size:10px;letter-spacing:.14em}
+</style><h1>10 plantillas de tema</h1><p>Solo cambian los colores/tokens; la estructura es la misma. Fuente: <code>src/styles/themes.css</code>.</p><div class="grid"><article class="th" data-theme="gridiron"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Gridiron</h3><span class="tag">Césped clásico (actual)</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="gridiron"</code></article><article class="th" data-theme="nuffle"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Nuffle</h3><span class="tag">Cuero y pergamino</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="nuffle"</code></article><article class="th" data-theme="caos"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Yermos del Caos</h3><span class="tag">Ceniza y brasas</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="caos"</code></article><article class="th" data-theme="elfos"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Reinos Élficos</h3><span class="tag">Marfil, verde azulado y plata</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="elfos"</code></article><article class="th" data-theme="no-muertos"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Cripta</h3><span class="tag">Violeta y hueso</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="no-muertos"</code></article><article class="th" data-theme="orcos"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Orcos y Goblins</h3><span class="tag">Verde brillante y naranja</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="orcos"</code></article><article class="th" data-theme="enanos"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Forja Enana</h3><span class="tag">Pizarra y cobre</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="enanos"</code></article><article class="th" data-theme="hielo"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Yermos Helados</h3><span class="tag">Hielo y azul</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="hielo"</code></article><article class="th" data-theme="desierto"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Copa del Desierto</h3><span class="tag">Arena y terracota</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="desierto"</code></article><article class="th" data-theme="nocturno"><div class="field"><div class="hd"><small>RONDA 3 EN JUEGO · FUMBBL</small><h3>Partido Nocturno</h3><span class="tag">Neón bajo los focos</span></div>
+<div class="row"><b>1</b> La orden del Santo Pernil <em>200</em></div><div class="row alt"><b>2</b> Les Chevaliers <em>200</em></div><div class="news"><i>NOTICIA</i> Gana 0-2 con 3 bajas</div></div><code>data-theme="nocturno"</code></article></div></html>
