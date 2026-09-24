@@ -156,13 +156,15 @@ async function fetchMatchDetails(page, matchId, homeId, awayId) {
   });
   return page.evaluate(
     ({ homeId, awayId }) => {
-      const casOf = (side) => {
+      const statOf = (side, cls) => {
         const foot = document.querySelector(`.performancecontainer.${side} .player.foot`);
-        const cell = foot?.querySelector('.cas');
+        const cell = foot?.querySelector(`.${cls}`);
         if (!cell) return null;
         const txt = cell.textContent.trim();
         return txt === '' || txt === '-' ? 0 : Number(txt);
       };
+      const casOf = (side) => statOf(side, 'cas');
+      const compOf = (side) => statOf(side, 'comp');
       const mvpOf = (side) => {
         const container = document.querySelector(`.performancecontainer.${side}`);
         if (!container) return null;
@@ -201,6 +203,8 @@ async function fetchMatchDetails(page, matchId, homeId, awayId) {
       return {
         cas_home: casOf('home'),
         cas_away: casOf('away'),
+        comp_home: compOf('home'),
+        comp_away: compOf('away'),
         mvp_home: mvpOf('home'),
         mvp_away: mvpOf('away'),
         casualties: [...casualtiesOf('home', homeId), ...casualtiesOf('away', awayId)],
@@ -258,7 +262,7 @@ function ensureRoundInSchedule(key, label, pairs) {
 // -------- Supabase --------
 async function supabaseGetExisting() {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,mvp_home,mvp_away,played_at,fumbbl_match_id,casualties`,
+    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,comp_home,comp_away,mvp_home,mvp_away,played_at,fumbbl_match_id,casualties`,
     { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
   );
   if (!res.ok) throw new Error(`Supabase GET falló: ${res.status} ${await res.text()}`);
@@ -343,6 +347,8 @@ async function main() {
         let details = {
           cas_home: null,
           cas_away: null,
+          comp_home: null,
+          comp_away: null,
           mvp_home: null,
           mvp_away: null,
           casualties: null,
@@ -365,6 +371,8 @@ async function main() {
           prev.fumbbl_match_id !== (m.matchId ?? null) ||
           (details.cas_home != null && prev.cas_home !== details.cas_home) ||
           (details.cas_away != null && prev.cas_away !== details.cas_away) ||
+          (details.comp_home != null && prev.comp_home !== details.comp_home) ||
+          (details.comp_away != null && prev.comp_away !== details.comp_away) ||
           (details.mvp_home != null && prev.mvp_home !== details.mvp_home) ||
           (details.mvp_away != null && prev.mvp_away !== details.mvp_away) ||
           (details.played_at != null && prev.played_at !== details.played_at) ||
@@ -386,6 +394,8 @@ async function main() {
           // Solo se incluyen (y por lo tanto se escriben) si se pudieron leer.
           if (details.cas_home != null) payload.cas_home = details.cas_home;
           if (details.cas_away != null) payload.cas_away = details.cas_away;
+          if (details.comp_home != null) payload.comp_home = details.comp_home;
+          if (details.comp_away != null) payload.comp_away = details.comp_away;
           if (details.mvp_home != null) payload.mvp_home = details.mvp_home;
           if (details.mvp_away != null) payload.mvp_away = details.mvp_away;
           if (details.played_at != null) payload.played_at = details.played_at;

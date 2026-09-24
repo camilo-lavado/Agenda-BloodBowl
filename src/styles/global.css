@@ -1118,7 +1118,7 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 /* ---------- Líderes ---------- */
 .leaders-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 

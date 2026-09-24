@@ -101,12 +101,14 @@ del torneo en FUMBBL con un navegador real (la página tiene protección anti-bo
   que hubiera antes (incluida una carga a mano equivocada). **Nota** y **fecha/hora agendada** son cosas que
   solo existen en la web —FUMBBL no las tiene— y esas nunca se tocan.
 
-Con esos datos la web arma solita: un mini-ranking de **líderes** (más touchdowns, más bajas, más veces MVP),
-un **recap** de una línea por partido ("Equipo A venció a Equipo B 3-1..."), un **"Salón de los caídos"** con
-las bajas graves del torneo, y un enlace directo a la ficha del partido en FUMBBL.
+Con esos datos la web arma solita: un mini-ranking de **líderes** (más touchdowns, más bajas, más pasador,
+MVP acumulado — este último por jugador, ya que en Blood Bowl cada equipo nombra su propio MVP en cada
+partido), un **recap** de una línea por partido ("Equipo A venció a Equipo B 3-1..."), un **"Salón de los
+caídos"** con las bajas graves del torneo, y un enlace directo a la ficha del partido en FUMBBL.
 
-Antes de la primera corrida hay que ejecutar, una sola vez, en Supabase → SQL Editor:
-[`supabase/fumbbl-extras.sql`](supabase/fumbbl-extras.sql) (agrega las columnas nuevas a `matches`).
+Antes de la primera corrida hay que ejecutar, una sola vez cada uno, en Supabase → SQL Editor:
+[`supabase/fumbbl-extras.sql`](supabase/fumbbl-extras.sql) y
+[`supabase/fumbbl-completions.sql`](supabase/fumbbl-completions.sql) (agregan las columnas nuevas a `matches`).
 
 El script vive en [`automation/`](automation), separado del sitio (Astro) para no meterle Playwright al build de la web.
 
@@ -170,6 +172,7 @@ supabase/
   schema.sql            tabla coaches + semilla
   matches.sql           tabla matches (día/hora + resultado)
   fumbbl-extras.sql     columnas de mvp/bajas nombradas/fecha jugada/id de FUMBBL
+  fumbbl-completions.sql columnas de pases completados (comp_home/comp_away)
 automation/
   sync-fumbbl.mjs       lee FUMBBL y sincroniza rondas/resultados
   run-sync.ps1          envoltorio para la tarea programada (con log)

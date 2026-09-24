@@ -182,7 +182,11 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
           <ol class="leader-list" id="leaders-cas"></ol>
         </div>
         <div class="leader-col">
-          <p class="leader-title">⭐ Más MVP</p>
+          <p class="leader-title">🎯 Más pasador</p>
+          <ol class="leader-list" id="leaders-comp"></ol>
+        </div>
+        <div class="leader-col">
+          <p class="leader-title">⭐ MVP acumulado</p>
           <ol class="leader-list" id="leaders-mvp"></ol>
         </div>
       </div>
@@ -407,6 +411,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     td_away: number | null;
     cas_home: number | null;
     cas_away: number | null;
+    comp_home?: number | null;
+    comp_away?: number | null;
     mvp_home?: string | null;
     mvp_away?: string | null;
     played_at?: string | null;
@@ -635,14 +641,16 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   function renderLeaders() {
     const tdList = document.getElementById('leaders-td');
     const casList = document.getElementById('leaders-cas');
+    const compList = document.getElementById('leaders-comp');
     const mvpList = document.getElementById('leaders-mvp');
     const empty = document.getElementById('leaders-empty');
     const count = document.getElementById('leaders-count');
     const grid = document.querySelector<HTMLElement>('.leaders-grid');
-    if (!tdList || !casList || !mvpList) return;
+    if (!tdList || !casList || !compList || !mvpList) return;
 
     const tdOf = new Map<string, number>();
     const casOf = new Map<string, number>();
+    const compOf = new Map<string, number>();
     const mvpOf = new Map<string, number>(); // clave: "<teamId>::<jugador>"
     let anyResult = false;
 
@@ -654,6 +662,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       tdOf.set(m.away_id, (tdOf.get(m.away_id) ?? 0) + (m.td_away ?? 0));
       casOf.set(m.home_id, (casOf.get(m.home_id) ?? 0) + (m.cas_home ?? 0));
       casOf.set(m.away_id, (casOf.get(m.away_id) ?? 0) + (m.cas_away ?? 0));
+      if (m.comp_home != null) compOf.set(m.home_id, (compOf.get(m.home_id) ?? 0) + m.comp_home);
+      if (m.comp_away != null) compOf.set(m.away_id, (compOf.get(m.away_id) ?? 0) + m.comp_away);
       if (m.mvp_home) {
         const k = `${m.home_id}::${m.mvp_home}`;
         mvpOf.set(k, (mvpOf.get(k) ?? 0) + 1);
@@ -684,6 +694,10 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       .map(([id, n]) => teamRow(id, n, ''))
       .join('') || '<li class="leader-empty">—</li>';
     casList.innerHTML = top(casOf, 3)
+      .map(([id, n]) => teamRow(id, n, ''))
+      .join('') || '<li class="leader-empty">—</li>';
+    compList.innerHTML = top(compOf, 3)
+      .filter(([, n]) => n > 0)
       .map(([id, n]) => teamRow(id, n, ''))
       .join('') || '<li class="leader-empty">—</li>';
     mvpList.innerHTML =
@@ -1455,7 +1469,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       supabase
         .from('matches')
         .select(
-          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, mvp_home, mvp_away, played_at, fumbbl_match_id, casualties, note, updated_at',
+          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, comp_home, comp_away, mvp_home, mvp_away, played_at, fumbbl_match_id, casualties, note, updated_at',
         ),
     ]);
 
