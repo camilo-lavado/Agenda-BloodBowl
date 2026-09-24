@@ -501,6 +501,50 @@ body::before {
   opacity: .85;
 }
 
+/* ---------- Banner de noticias del partido (nota / recap) ---------- */
+.fx-ticker {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--card-2);
+  padding: 6px 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: background-color .16s ease;
+}
+
+.fx-ticker:hover { background: var(--blood-tint); }
+
+.fx-ticker-track {
+  display: inline-block;
+  padding-left: 14px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  transition: color .16s ease;
+}
+
+.fx-ticker:hover .fx-ticker-track { color: var(--ink); }
+
+.fx-ticker.scroll .fx-ticker-track {
+  padding-left: 100%;
+  animation: fx-ticker-scroll 15s linear infinite;
+}
+
+.fx-ticker.scroll:hover .fx-ticker-track { animation-play-state: paused; }
+
+@keyframes fx-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
 /* ---------- Listado de jugadores ---------- */
 .roster {
   position: relative;
@@ -1188,6 +1232,36 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
   color: var(--blood-strong);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Salón de los caídos (colapsable + acumulados) ---------- */
+.section > h2.collapsible { cursor: pointer; user-select: none; }
+.section > h2.collapsible:hover { color: var(--blood-strong); }
+
+.collapsible .chev {
+  display: inline-block;
+  width: 14px;
+  margin-right: 2px;
+  font-size: .8em;
+  color: var(--ink-soft);
+  transition: transform .18s ease;
+}
+
+.collapsible.open .chev { transform: rotate(90deg); }
+
+.fallen-summary { margin-bottom: 14px; }
+
+.fchips { display: inline-flex; gap: 6px; flex-shrink: 0; }
+
+.fchip {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fchip.dead { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+.fchip.hurt { background: color-mix(in srgb, var(--partial) 20%, transparent); color: var(--partial); }
 
 /* ---------- Salón de los caídos ---------- */
 .fallen-list {

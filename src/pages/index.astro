@@ -128,6 +128,9 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
                     <span class="fx-team">{fx.away.team_name}</span>
                     <span class="fx-coach js-name">{fx.away.fumbbl_coach}</span>
                   </button>
+                  <button class="fx-ticker" type="button" data-match={fx.id} hidden aria-label="Ver partido">
+                    <span class="fx-ticker-track"></span>
+                  </button>
                 </div>
               ))}
             </div>
@@ -194,9 +197,23 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     </section>
 
     <section class="section" id="sec-fallen">
-      <h2>Salón de los caídos <span class="count" id="fallen-count"></span></h2>
-      <ul class="fallen-list" id="fallen-list" hidden></ul>
-      <p class="results-empty" id="fallen-empty">Nadie ha caído... todavía.</p>
+      <h2 class="collapsible" id="fallen-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="fallen-body">
+        <span class="chev" aria-hidden="true">▸</span>Salón de los caídos <span class="count" id="fallen-count"></span>
+      </h2>
+      <div id="fallen-body" hidden>
+        <div class="leaders-grid fallen-summary" id="fallen-summary" hidden>
+          <div class="leader-col">
+            <p class="leader-title">🩸 Equipos más golpeados</p>
+            <ol class="leader-list" id="fallen-teams"></ol>
+          </div>
+          <div class="leader-col">
+            <p class="leader-title">🍀 Jugadores más yetas</p>
+            <ol class="leader-list" id="fallen-players"></ol>
+          </div>
+        </div>
+        <ul class="fallen-list" id="fallen-list" hidden></ul>
+        <p class="results-empty" id="fallen-empty">Nadie ha caído... todavía.</p>
+      </div>
     </section>
 
     <section class="section" id="sec-roster">
@@ -748,9 +765,66 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     }
     events.sort((a, b) => (b.when ?? '').localeCompare(a.when ?? ''));
 
-    if (count) count.textContent = events.length ? String(events.length) : '';
+    const isDead = (o: string) => o.startsWith('Dead');
+    const deaths = events.filter((e) => isDead(e.outcome)).length;
+    if (count) {
+      count.textContent = events.length ? `${events.length} · 💀 ${deaths}` : '';
+    }
     if (empty) empty.hidden = events.length > 0;
     list.hidden = events.length === 0;
+
+    // ---- Acumulados: equipos más golpeados / jugadores más yetas ----
+    const teamsEl = document.getElementById('fallen-teams');
+    const playersEl = document.getElementById('fallen-players');
+    const summaryEl = document.getElementById('fallen-summary');
+    if (summaryEl) summaryEl.hidden = events.length === 0;
+
+    type Agg = { dead: number; hurt: number };
+    const byTeam = new Map<string, Agg>();
+    const byPlayer = new Map<string, Agg & { player: string; teamId: string }>();
+    for (const ev of events) {
+      const dead = isDead(ev.outcome);
+      const t = byTeam.get(ev.teamId) ?? { dead: 0, hurt: 0 };
+      if (dead) t.dead++;
+      else t.hurt++;
+      byTeam.set(ev.teamId, t);
+      const pk = `${ev.teamId}::${ev.player}`;
+      const p = byPlayer.get(pk) ?? { dead: 0, hurt: 0, player: ev.player, teamId: ev.teamId };
+      if (dead) p.dead++;
+      else p.hurt++;
+      byPlayer.set(pk, p);
+    }
+    const score = (a: Agg) => a.dead * 2 + a.hurt; // la muerte pesa el doble
+    const chips = (a: Agg) =>
+      (a.dead ? `<span class="fchip dead">💀 ${a.dead}</span>` : '') +
+      (a.hurt ? `<span class="fchip hurt">🤕 ${a.hurt}</span>` : '');
+
+    if (teamsEl) {
+      teamsEl.innerHTML = [...byTeam.entries()]
+        .sort((a, b) => score(b[1]) - score(a[1]))
+        .slice(0, 5)
+        .map(([id, a]) => {
+          const c = cmap.get(id);
+          return (
+            `<li data-open="${esc(id)}"><span class="leader-name">${esc(c?.team_name ?? id)}` +
+            `<small>${esc(coachLabel(id))}</small></span><span class="fchips">${chips(a)}</span></li>`
+          );
+        })
+        .join('');
+    }
+    if (playersEl) {
+      playersEl.innerHTML = [...byPlayer.values()]
+        .sort((a, b) => score(b) - score(a) || a.player.localeCompare(b.player))
+        .slice(0, 5)
+        .map((p) => {
+          const c = cmap.get(p.teamId);
+          return (
+            `<li data-open="${esc(p.teamId)}"><span class="leader-name">${esc(p.player)}` +
+            `<small>${esc(c?.team_name ?? '')}</small></span><span class="fchips">${chips(p)}</span></li>`
+          );
+        })
+        .join('');
+    }
 
     list.innerHTML = events
       .map((ev) => {
@@ -933,6 +1007,23 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
           } else {
             info.textContent = 'agendar';
             info.dataset.kind = 'empty';
+          }
+        }
+
+        // Banner de noticias: la nota manual manda; si no hay, el recap automático.
+        const ticker = el.querySelector<HTMLButtonElement>('.fx-ticker');
+        if (ticker) {
+          const track = ticker.querySelector<HTMLElement>('.fx-ticker-track')!;
+          const fxInfo = fmap.get(el.dataset.fixture!);
+          const text = (m?.note?.trim() || (m && fxInfo ? matchRecap(fxInfo, m) : null) || '').trim();
+          if (text) {
+            track.textContent = text;
+            ticker.hidden = false;
+            ticker.classList.toggle('scroll', text.length > 42);
+          } else {
+            ticker.hidden = true;
+            track.textContent = '';
+            ticker.classList.remove('scroll');
           }
         }
       });
@@ -1450,9 +1541,26 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
     if (li) openDetail(li.dataset.open!);
   });
-  document.getElementById('fallen-list')!.addEventListener('click', (e) => {
+  document.getElementById('fallen-body')!.addEventListener('click', (e) => {
     const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
     if (li) openDetail(li.dataset.open!);
+  });
+
+  // Salón de los caídos: colapsable (cerrado por defecto)
+  const fallenToggle = document.getElementById('fallen-toggle')!;
+  const fallenBody = document.getElementById('fallen-body')!;
+  const toggleFallen = () => {
+    const open = fallenBody.hidden;
+    fallenBody.hidden = !open;
+    fallenToggle.setAttribute('aria-expanded', String(open));
+    fallenToggle.classList.toggle('open', open);
+  };
+  fallenToggle.addEventListener('click', toggleFallen);
+  fallenToggle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleFallen();
+    }
   });
 
   function openFromHash() {
