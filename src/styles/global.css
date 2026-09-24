@@ -1791,3 +1791,143 @@ button, .wa-btn { border-radius: 6px; }
 }
 .fx-ticker:hover .fx-ticker-track { color: #000; }
 .leaders-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+
+/* Botón secundario de colapso (lista completa de bajas) */
+.sub-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  margin-top: 4px; padding: 10px 14px;
+  background: var(--card); color: var(--ink);
+  border: 1px dashed var(--line-strong); border-radius: 6px;
+  font: 600 13px/1 Inter, sans-serif; cursor: pointer; text-align: left;
+}
+.sub-toggle:hover { border-color: var(--blood); color: var(--blood); }
+.sub-toggle .chev { display: inline-flex; transition: transform .18s ease; color: var(--ink-soft); }
+.sub-toggle.open .chev { transform: rotate(90deg); }
+.sub-toggle + .fallen-list { margin-top: 10px; }
+
+/* Pie de página: panel oscuro legible sobre la cancha */
+.site-foot {
+  margin-top: 40px;
+  padding: 18px clamp(16px, 4vw, 28px);
+  background: var(--panel);
+  color: color-mix(in srgb, var(--panel-ink) 75%, transparent);
+  border-radius: var(--radius);
+  border-top: 3px solid var(--gold);
+}
+.site-foot .credit { margin-top: 8px; font-weight: 600; letter-spacing: .04em; }
+.site-foot a { color: var(--gold); text-decoration: none; border-bottom: 1px solid transparent; }
+.site-foot a:hover { border-bottom-color: var(--gold); }
+
+/* ---------- Hero ---------- */
+.site-head {
+  position: relative;
+  overflow: hidden;
+  padding: 30px clamp(18px, 4vw, 34px) 26px;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 255, 255, .025) 22px 44px),
+    linear-gradient(160deg, color-mix(in srgb, var(--panel) 82%, #1d4a29) 0%, var(--panel) 62%);
+}
+.site-head > *:not(.hero-art) { position: relative; z-index: 1; }
+.hero-art {
+  position: absolute; z-index: 0;
+  right: -18px; top: -6px;
+  width: clamp(170px, 34vw, 300px);
+  color: var(--gold);
+  opacity: .22;
+  pointer-events: none;
+}
+.site-head .kicker { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--blood-strong);
+  box-shadow: 0 0 0 0 rgba(238, 116, 110, .7);
+  animation: livePulse 1.8s ease-out infinite;
+}
+@keyframes livePulse { to { box-shadow: 0 0 0 9px rgba(238, 116, 110, 0); } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+.site-head h1 { display: flex; flex-direction: column; gap: 6px; }
+.site-head h1::after { display: none; }
+.site-head h1 span { font-size: clamp(2.6rem, 9vw, 4.6rem); line-height: .92; letter-spacing: .015em; }
+.site-head h1 small {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 4px 10px 3px;
+  background: var(--blood-strong);
+  color: #fff;
+  font: 700 clamp(.85rem, 2.4vw, 1.05rem)/1.2 "Barlow Condensed", sans-serif;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  transform: skewX(-8deg);
+}
+
+.hero-stats {
+  list-style: none; margin: 18px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 6px 22px;
+  font-size: 13px; color: color-mix(in srgb, var(--panel-ink) 70%, transparent);
+}
+.hero-stats strong { color: var(--gold); font: 700 1.5rem/1 "Barlow Condensed", sans-serif; margin-right: 4px; }
+
+.hero-steps {
+  list-style: none; margin: 20px 0 18px; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.hero-steps li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+  font-size: 12.5px; line-height: 1.35;
+  color: color-mix(in srgb, var(--panel-ink) 70%, transparent);
+}
+.hero-steps .ico { width: 1.4em; height: 1.4em; margin-top: 1px; color: var(--gold); }
+.hero-steps b { display: block; color: var(--panel-ink); font-size: 13.5px; }
+.hero-fine { margin: 12px 0 0; font-size: 12px; font-style: italic; color: color-mix(in srgb, var(--panel-ink) 55%, transparent); }
+@media (max-width: 620px) {
+  .hero-steps { grid-template-columns: 1fr; gap: 8px; }
+  .hero-art { opacity: .12; }
+}
+
+/* ---------- Podio final ---------- */
+.podium-sec > h2 .chev { color: var(--gold); }
+.podium {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end;
+  padding: 18px 12px 0;
+  background: var(--panel); border-radius: var(--radius); border-top: 3px solid var(--gold);
+  box-shadow: var(--shadow-lg);
+}
+.pod {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 6px 0; border: 0; background: none; color: var(--panel-ink);
+  font: inherit; text-align: center; cursor: pointer;
+}
+.pod-medal .ico { width: 2rem; height: 2rem; }
+.pod.oro .pod-medal { color: #f2c94c; filter: drop-shadow(0 0 8px rgba(242, 201, 76, .6)); }
+.pod.plata .pod-medal { color: #c9d1d9; }
+.pod.bronce .pod-medal { color: #cd7f32; }
+.pod-team { font: 700 clamp(.95rem, 3vw, 1.2rem)/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+.pod-coach { font-size: 12px; opacity: .75; }
+.pod-pts { font-weight: 700; color: var(--gold); font-size: 13px; }
+.pod-step {
+  width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  border-radius: 4px 4px 0 0;
+  font: 700 2.2rem/1 "Barlow Condensed", sans-serif; color: rgba(255, 255, 255, .5);
+}
+.pod-1 .pod-step { height: 96px; }
+.pod-2 .pod-step { height: 70px; }
+.pod-3 .pod-step { height: 50px; }
+.pod:hover .pod-team { color: var(--gold); }
+.awards {
+  list-style: none; margin: 12px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px;
+}
+.awards li {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+  background: var(--card); border: 1px solid var(--line-strong); border-left: 3px solid var(--gold);
+  border-radius: 6px; font-size: 13px; box-shadow: var(--shadow);
+}
+.awards li > .ico { width: 1.4em; height: 1.4em; color: var(--blood); margin-top: 2px; }
+.awards b { display: block; font: 700 .95rem/1.2 "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .08em; }

@@ -371,7 +371,18 @@ async function supabaseUpsertMatches(payloads) {
 }
 
 // -------- main --------
+// El torneo tiene 4 rondas. Cuando la última está completa en FUMBBL se deja
+// un marcador (.tournament-done) y las corridas siguientes no hacen nada:
+// así la tarea programada puede seguir activa sin volver a tocar FUMBBL.
+// Para forzar una corrida:  node sync-fumbbl.mjs --force
+const TOTAL_ROUNDS = 4;
+const DONE_FLAG = path.join(__dirname, '.tournament-done');
+
 async function main() {
+  if (existsSync(DONE_FLAG) && !process.argv.includes('--force')) {
+    console.log('🏁 Torneo terminado (ver .tournament-done). Nada que sincronizar. Usa --force para correr igual.');
+    return;
+  }
   const nameToId = loadCoachNameToId();
   const idToName = invert(nameToId);
 
@@ -512,6 +523,14 @@ async function main() {
       console.log('Sin resultados nuevos que subir.');
     }
     if (!scheduleChanged) console.log('Sin rondas nuevas en el calendario.');
+
+    // ¿Terminó el torneo? Ronda 4 presente y todos sus partidos con marcador.
+    const last = scraped[scraped.length - 1];
+    const lastNum = Number((last?.label.match(/\d+/) ?? [0])[0]);
+    if (lastNum >= TOTAL_ROUNDS && last.matches.length && last.matches.every((m) => m.td_home != null && m.td_away != null)) {
+      writeFileSync(DONE_FLAG, new Date().toISOString());
+      console.log('🏁 Las 4 rondas están completas: torneo terminado. El sincronizador queda en pausa.');
+    }
   } finally {
     await browser.close();
   }

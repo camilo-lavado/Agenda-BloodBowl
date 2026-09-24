@@ -18,3 +18,5 @@ Thumbs.db
 
 # capturas de diagnóstico del sincronizador (automation/)
 automation/debug-anubis.*
+
+automation/.tournament-done

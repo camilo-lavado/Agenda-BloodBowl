@@ -41,15 +41,32 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
 <Base>
   <div class="layout">
     <header class="site-head">
-      <p class="kicker">FUMBBL · Blood Bowl · {currentRoundLabel}</p>
-      <h1>Tasting Blood VI — Contactos</h1>
-      <p class="sub">
-        Pincha un jugador para ver su contacto, o el centro de un partido para
-        fijar día, hora y resultado. Elige tu coach en «Soy» para editar tu ficha;
-        los partidos los edita cualquiera, así que ojo: aquí la confianza es lo
-        único que sobrevive a la ronda.
-      </p>
+      <svg class="hero-art" viewBox="0 0 320 300" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M60 20 V110 Q60 130 80 130 H240 Q260 130 260 110 V20" />
+          <path d="M160 130 V290" />
+          <path d="M40 290 H280" opacity=".5" />
+        </g>
+        <g transform="translate(200 190) rotate(-28)">
+          <ellipse rx="62" ry="36" fill="currentColor" opacity=".16" />
+          <ellipse rx="62" ry="36" fill="none" stroke="currentColor" stroke-width="4" />
+          <path d="M-20 0 H20 M-10 -9 V9 M0 -9 V9 M10 -9 V9" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
+        </g>
+      </svg>
+      <p class="kicker"><span class="live-dot" aria-hidden="true"></span>{currentRoundLabel} en juego · FUMBBL</p>
+      <h1><span>Tasting Blood VI</span><small>Contactos y calendario</small></h1>
+      <ul class="hero-stats" aria-label="Resumen del torneo">
+        <li><strong>{roster.length}</strong> coaches</li>
+        <li><strong>{rounds.length}</strong> rondas</li>
+        <li><strong>{fixtures.length}</strong> partidos por ronda</li>
+      </ul>
+      <ol class="hero-steps">
+        <li><Fragment set:html={icon('user')} /><span><b>Toca un jugador</b>contacto y WhatsApp</span></li>
+        <li><Fragment set:html={icon('calendar')} /><span><b>Toca un partido</b>día, hora y resultado</span></li>
+        <li><Fragment set:html={icon('shield')} /><span><b>Elige «Soy»</b>para editar tu ficha</span></li>
+      </ol>
       <input id="search" type="search" placeholder="Buscar equipo, coach o persona…" aria-label="Buscar" autocomplete="off" />
+      <p class="hero-fine">Los partidos los edita cualquiera. Aquí la confianza es lo único que sobrevive a la ronda.</p>
       <p id="status" class="banner" hidden></p>
     </header>
 
@@ -141,8 +158,17 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       </div>
     </section>
 
+    <section class="section podium-sec" id="sec-podium" hidden>
+      <h2><span class="chev" aria-hidden="true" set:html={icon('trophy')}></span>Podio final</h2>
+      <div class="podium" id="podium"></div>
+      <ul class="awards" id="awards"></ul>
+    </section>
+
     <section class="section" id="sec-standings">
-      <h2>Clasificación <span class="count" id="standings-count"></span></h2>
+      <h2 class="collapsible open" id="standings-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="standings-wrap">
+        <span class="chev" aria-hidden="true" set:html={icon('chevron-right')}></span>Clasificación <span class="count" id="standings-count"></span>
+      </h2>
+      <div id="standings-wrap">
       <div class="table-wrap">
         <table class="standings">
           <thead>
@@ -160,6 +186,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
         </table>
       </div>
       <p class="results-empty" id="standings-empty">Aún no hay resultados. Todos siguen invictos y con las rodillas intactas.</p>
+      </div>
     </section>
 
     <section class="section" id="sec-leaders">
@@ -204,6 +231,9 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
             <ol class="leader-list" id="fallen-players"></ol>
           </div>
         </div>
+        <button type="button" class="sub-toggle" id="fallen-all-toggle" aria-expanded="false" aria-controls="fallen-list" hidden>
+          <span class="chev" aria-hidden="true" set:html={icon('chevron-right')}></span><span id="fallen-all-label">Ver todas las bajas</span>
+        </button>
         <ul class="fallen-list" id="fallen-list" hidden></ul>
         <p class="results-empty" id="fallen-empty">Nadie ha caído... todavía. Los cementerios son pacientes.</p>
       </div>
@@ -229,7 +259,10 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     </section>
 
     <section class="section" id="sec-roster">
-      <h2>Jugadores <span class="count">{roster.length}</span></h2>
+      <h2 class="collapsible open" id="roster-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="roster-wrap">
+        <span class="chev" aria-hidden="true" set:html={icon('chevron-right')}></span>Jugadores <span class="count">{roster.length}</span>
+      </h2>
+      <div id="roster-wrap">
       <p class="legend">
         <span><i class="status-dot" data-state="ok" aria-hidden="true"></i> con WhatsApp</span>
         <span><i class="status-dot" data-state="partial" aria-hidden="true"></i> solo nombre</span>
@@ -249,10 +282,12 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
           </li>
         ))}
       </ul>
+      </div>
     </section>
 
     <footer class="site-foot">
       <p>Sin registro ni contraseñas. Los datos se guardan en Supabase. Hecho para el grupo de Tasting Blood VI.</p>
+      <p class="credit">Desarrollado por <a href="https://www.caladev.page/" target="_blank" rel="noopener">CalaDev</a></p>
     </footer>
   </div>
 
@@ -376,6 +411,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
         })),
       })),
     )};
+    window.__FIXTURES_PER_ROUND__ = ${fixtures.length};
     window.__ROUND__ = ${JSON.stringify(currentRoundLabel)};
     window.__ROUND_KEY__ = ${JSON.stringify(currentRoundKey)};
   `} />
@@ -461,6 +497,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   const CURRENT_FIXTURES: FixtureInfo[] =
     ROUNDS.find((r) => r.key === ROUND_KEY)?.fixtures ?? [];
   const cmap = new Map(COACHES.map((c) => [c.id, c]));
+  const FIXTURES_PER_ROUND: number = (window as any).__FIXTURES_PER_ROUND__ ?? 7;
   const fmap = new Map(FIXTURES.map((fx) => [fx.id, fx]));
   const roundOfFixture = new Map<string, RoundInfo>();
   ROUNDS.forEach((r) => r.fixtures.forEach((fx) => roundOfFixture.set(fx.id, r)));
@@ -590,6 +627,73 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   };
   let fumbblStandings: FStand[] = [];
 
+  // -------- Podio: aparece cuando están los resultados de las 4 rondas --------
+  const TOTAL_ROUNDS = 4;
+  function tournamentDone(): boolean {
+    if (new URLSearchParams(location.search).has('podio')) return true; // vista previa
+    const perRound = new Map<string, number>();
+    for (const m of mstate.values()) {
+      if (m.td_home != null && m.td_away != null) perRound.set(m.round, (perRound.get(m.round) ?? 0) + 1);
+    }
+    const per = FIXTURES_PER_ROUND;
+    return perRound.size >= TOTAL_ROUNDS && [...perRound.values()].every((n) => n >= per);
+  }
+
+  function renderPodium(rows: { id: string; pts: number; tdd: number; casd: number }[]) {
+    const sec = document.getElementById('sec-podium');
+    const box = document.getElementById('podium');
+    const awards = document.getElementById('awards');
+    if (!sec || !box || !awards) return;
+    const done = tournamentDone() && rows.length >= 3;
+    sec.hidden = !done;
+    if (!done) return;
+
+    // Orden visual: 2º, 1º, 3º
+    const order = [1, 0, 2];
+    const medal = ['oro', 'plata', 'bronce'];
+    box.innerHTML = order
+      .map((i) => {
+        const r = rows[i];
+        const c = cmap.get(r.id);
+        if (!c) return '';
+        return (
+          `<button type="button" class="pod pod-${i + 1} ${medal[i]}" data-open="${esc(r.id)}">` +
+          `<span class="pod-medal">${icon('trophy')}</span>` +
+          `<span class="pod-team">${esc(c.team_name)}</span>` +
+          `<span class="pod-coach">${ent('coach', coachLabel(r.id))}</span>` +
+          `<span class="pod-pts">${r.pts} pts</span>` +
+          `<span class="pod-step"><b>${i + 1}</b></span></button>`
+        );
+      })
+      .join('');
+
+    // Premios: máximo anotador, brutalista, equipo más golpeado
+    const td = new Map<string, number>();
+    const bash = new Map<string, { player: string; teamId: string; cas: number }>();
+    const hit = new Map<string, number>();
+    for (const m of mstate.values()) {
+      if (m.home_id && m.td_home != null) td.set(m.home_id, (td.get(m.home_id) ?? 0) + m.td_home);
+      if (m.away_id && m.td_away != null) td.set(m.away_id, (td.get(m.away_id) ?? 0) + m.td_away);
+      for (const b of m.bashers ?? []) {
+        const k = `${b.team_id}::${b.player}`;
+        const cur = bash.get(k) ?? { player: b.player, teamId: b.team_id, cas: 0 };
+        cur.cas += b.cas;
+        bash.set(k, cur);
+      }
+      for (const ev of m.casualties ?? []) hit.set(ev.team_id, (hit.get(ev.team_id) ?? 0) + 1);
+    }
+    const best = <T,>(it: Iterable<[string, T]>, val: (v: T) => number) =>
+      [...it].sort((a, b) => val(b[1]) - val(a[1]))[0];
+    const items: string[] = [];
+    const tdBest = best(td.entries(), (v) => v);
+    if (tdBest) items.push(`<li>${icon('goal')}<span><b>Más touchdowns</b>${ent('team', cmap.get(tdBest[0])?.team_name ?? tdBest[0])} · ${tdBest[1]}</span></li>`);
+    const bBest = best(bash.entries(), (v) => v.cas);
+    if (bBest) items.push(`<li>${icon('axe')}<span><b>Brutalista del torneo</b>${ent('player', bBest[1].player)} · ${bBest[1].cas} bajas</span></li>`);
+    const hBest = best(hit.entries(), (v) => v);
+    if (hBest) items.push(`<li>${icon('skull')}<span><b>Saco de boxeo</b>${ent('team', cmap.get(hBest[0])?.team_name ?? hBest[0])} · ${hBest[1]} bajas sufridas</span></li>`);
+    awards.innerHTML = items.join('');
+  }
+
   function renderStandings() {
     const body = document.getElementById('standings-body');
     const empty = document.getElementById('standings-empty');
@@ -651,6 +755,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
           ),
       );
 
+    renderPodium(rows);
     if (count) count.textContent = rows.length ? String(rows.length) : '';
     if (empty) empty.hidden = rows.length > 0;
 
@@ -788,7 +893,10 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       count.innerHTML = events.length ? `${events.length} · ${icon('skull', 'ico-dead')} ${deaths}` : '';
     }
     if (empty) empty.hidden = events.length > 0;
-    list.hidden = events.length === 0;
+    const allToggle = document.getElementById('fallen-all-toggle');
+    const allLabel = document.getElementById('fallen-all-label');
+    if (allToggle) allToggle.hidden = events.length === 0;
+    if (allLabel) allLabel.textContent = `Ver todas las bajas (${events.length})`;
 
     // ---- Acumulados: equipos más golpeados / jugadores más yetas ----
     const teamsEl = document.getElementById('fallen-teams');
@@ -1615,6 +1723,10 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   });
 
   // ================= Clasificación: click en fila =================
+  document.getElementById('podium')!.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-open]');
+    if (b) openDetail(b.dataset.open!);
+  });
   document.getElementById('standings-body')!.addEventListener('click', (e) => {
     const tr = (e.target as HTMLElement).closest<HTMLElement>('tr[data-open]');
     if (tr) openDetail(tr.dataset.open!);
@@ -1656,6 +1768,19 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   makeCollapsible('leaders-toggle', 'leaders-body');
   makeCollapsible('fallen-toggle', 'fallen-body');
   makeCollapsible('brutal-toggle', 'brutal-body');
+  makeCollapsible('standings-toggle', 'standings-wrap');
+  makeCollapsible('roster-toggle', 'roster-wrap');
+  (() => {
+    const btn = document.getElementById('fallen-all-toggle');
+    const list = document.getElementById('fallen-list');
+    if (!btn || !list) return;
+    btn.addEventListener('click', () => {
+      const open = list.hidden;
+      list.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      btn.classList.toggle('open', open);
+    });
+  })();
 
   function openFromHash() {
     const h = decodeURIComponent((location.hash || '').slice(1));
