@@ -46,8 +46,8 @@ export const rounds: RoundDef[] = [
       ['red-corsairs', 'desert-eagles'],
       ['limari-zigurratz', 'a-tut-voyage'],
       ['olor-a-pescao', 'caballeros-de-dol-amroth'],
-      ['alianza-mafiosa', 'necrotasting'],
-      ['dead-drunks', 'goblins-sea-shanties'],
+      ['alianza-mafiosa', 'dead-drunks'],
+      ['necrotasting', 'goblins-sea-shanties'],
     ],
   },
 ];
