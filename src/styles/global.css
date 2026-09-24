@@ -125,7 +125,7 @@ body::before {
 
 .site-head h1 {
   margin: 0;
-  font-family: "Bebas Neue", Inter, sans-serif;
+  font-family: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
   font-weight: 400;
   font-size: clamp(2.3rem, 6vw, 3.6rem);
   line-height: 1;
@@ -198,7 +198,7 @@ body::before {
 
 .section > h2 {
   margin: 0 0 14px;
-  font-family: "Bebas Neue", Inter, sans-serif;
+  font-family: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
   font-weight: 400;
   font-size: 1.55rem;
   letter-spacing: .02em;
@@ -287,7 +287,7 @@ body::before {
 }
 
 .rc-label {
-  font-family: "Bebas Neue", Inter, sans-serif;
+  font-family: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
   font-size: 1.05rem;
   letter-spacing: .04em;
   color: var(--ink-soft);
@@ -474,7 +474,7 @@ body::before {
 .fixture[data-played] .fx-vs { color: var(--ok); }
 
 .fx-vs {
-  font-family: "Bebas Neue", Inter, sans-serif;
+  font-family: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
   font-size: 1.05rem;
   color: var(--blood);
   line-height: 1;
@@ -751,7 +751,7 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 .d-team,
 .m-title {
   margin: 0;
-  font-family: "Bebas Neue", Inter, sans-serif;
+  font-family: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
   font-weight: 400;
   font-size: 1.95rem;
   line-height: 1.02;
@@ -1107,7 +1107,7 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 
 .mp-teams {
   margin: 0;
-  font-family: "Bebas Neue", Inter, sans-serif;
+  font-family: "Barlow Condensed", "Arial Narrow", Inter, sans-serif;
   font-size: 1.4rem;
   line-height: 1.05;
 }
@@ -1593,3 +1593,152 @@ body::after {
 .toolbar, .banner {
   background: var(--card);
 }
+
+/* =====================================================================
+   Sistema visual "transmisión deportiva": superficies planas y nítidas,
+   tipografía condensada en mayúsculas, un solo acento (rojo equipo) y
+   dorado solo para detalles. Sin degradés en texto ni brillos.
+   ===================================================================== */
+:root {
+  --radius: 8px;
+  --card: #f8f6ef;
+  --card-2: #efeadb;
+  --ink: #101a14;
+  --ink-soft: #55604f;
+  --line: #d6d0bb;
+  --line-strong: #b9b198;
+  --blood: #a3231f;
+  --blood-strong: #b92c27;
+  --panel: #0e1c14;         /* barras oscuras (cabeceras) */
+  --panel-ink: #f4f1e6;
+  --gold: #d4a437;
+  --turf-a: #2b6b36;
+  --turf-b: #266130;
+  --shadow: 0 1px 0 rgba(0, 0, 0, .06), 0 2px 8px rgba(0, 0, 0, .18);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, .35);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card: #19211b;
+    --card-2: #202a22;
+    --ink: #eeeadb;
+    --ink-soft: #a7b0a0;
+    --line: #2c382f;
+    --line-strong: #3b4a3e;
+    --panel: #080f0b;
+    --panel-ink: #eeeadb;
+    --turf-a: #14301a;
+    --turf-b: #112a16;
+  }
+}
+
+body {
+  font-feature-settings: "tnum" 1, "cv11" 1;
+  letter-spacing: -.005em;
+}
+body::after { opacity: .6; }
+
+/* Cabecera: barra de marcador oscura */
+.site-head {
+  margin-top: 16px;
+  padding: 22px clamp(16px, 4vw, 30px) 22px;
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 0;
+  border-top: 4px solid var(--gold);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.site-head .kicker { color: var(--gold); letter-spacing: .28em; }
+.site-head h1 {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--panel-ink);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-size: clamp(2.2rem, 6.4vw, 3.5rem);
+}
+.site-head h1::after {
+  width: 56px; height: 3px; border-radius: 0; margin-top: 12px;
+  background: var(--blood-strong);
+}
+.site-head .sub { color: color-mix(in srgb, var(--panel-ink) 72%, transparent); }
+.site-head #search {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 6px;
+  color: var(--panel-ink);
+}
+.site-head #search::placeholder { color: rgba(244, 241, 230, .55); }
+.site-head #search:focus { background: rgba(255, 255, 255, .13); border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 164, 55, .25); }
+
+/* Títulos de sección: pestaña oscura tipo rótulo */
+.section > h2 {
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 0;
+  border-left: 5px solid var(--blood-strong);
+  border-radius: 4px;
+  padding: 9px 14px;
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow);
+}
+.section > h2::before { display: none; }
+.section > h2 .count { color: var(--gold); font-size: 12px; letter-spacing: .04em; }
+.section > h2.collapsible:hover { color: #fff; background: color-mix(in srgb, var(--panel) 85%, var(--blood)); }
+
+/* Superficies planas */
+.toolbar, .banner, .legend, .results-empty, .table-wrap,
+.leader-col, .fallen-list, .roster, .fixture {
+  border-radius: var(--radius);
+}
+.fixture {
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+}
+.fixture:hover { transform: none; border-color: var(--blood); box-shadow: var(--shadow), 0 0 0 1px var(--blood); }
+.table-wrap { border: 1px solid var(--line-strong); box-shadow: var(--shadow); background: var(--card); }
+.standings thead th {
+  background: var(--panel);
+  color: var(--panel-ink);
+  font-family: "Barlow Condensed", sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.standings tbody tr:nth-child(even) { background: color-mix(in srgb, var(--card-2) 70%, transparent); }
+.standings tbody tr:first-child .c-pos { color: var(--gold); font-weight: 700; }
+.leader-col { border: 1px solid var(--line-strong); box-shadow: var(--shadow); }
+.leader-title {
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+}
+button, .wa-btn { border-radius: 6px; }
+
+/* Navegador de rondas y progreso */
+.rc-label {
+  color: var(--panel-ink);
+  background: var(--panel);
+  padding: 4px 16px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.rc-nav {
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 0;
+  border-radius: 6px;
+}
+.rc-nav:hover:not(:disabled) { background: var(--blood); }
+.progress-fill { background: var(--gold); }
+.progress-fill.full { background: var(--turf-a); }
+.progress-track { border-radius: 2px; }
+.toolbar { border: 1px solid var(--line-strong); }
+.standings thead th.c-pts { color: var(--gold); }
+.standings tbody tr:first-child .c-pos { color: var(--blood); }
