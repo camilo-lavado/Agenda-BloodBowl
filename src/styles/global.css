@@ -1761,3 +1761,33 @@ button, .wa-btn { border-radius: 6px; }
 .leader-name small, .st-coach, .fallen-txt small { display: flex; margin-top: 2px; }
 .st-team, .st-coach { display: flex; }
 .fallen-txt small { display: flex; flex-wrap: wrap; gap: 0 .5em; align-items: center; }
+
+/* Glosa del partido: cintillo de noticias, llamativo */
+.fx-ticker {
+  position: relative;
+  background: var(--gold);
+  border-top: 2px solid var(--panel);
+  padding: 7px 0 7px 84px;
+  color: #1a1204;
+}
+.fx-ticker::before {
+  content: "NOTICIA";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  z-index: 1;
+  display: flex; align-items: center;
+  padding: 0 12px;
+  background: var(--blood-strong);
+  color: #fff;
+  font: 700 11px/1 "Barlow Condensed", sans-serif;
+  letter-spacing: .16em;
+}
+.fx-ticker:hover { background: color-mix(in srgb, var(--gold) 88%, #fff); }
+.fx-ticker-track {
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 600;
+  color: #1a1204;
+}
+.fx-ticker:hover .fx-ticker-track { color: #000; }
+.leaders-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
