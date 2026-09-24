@@ -281,20 +281,18 @@ function ensureRoundInSchedule(key, label, pairs) {
 // bajas con otra definición y los totales no coinciden).
 async function fetchStandings(page) {
   return page.evaluate(() => {
-    const h = [...document.querySelectorAll('.heading')].find((e) =>
-      /Tournament Members/i.test(e.textContent || ''),
-    );
-    const box = h?.nextElementSibling;
+    const box = document.querySelector('.tournamentmembers');
     if (!box) return [];
     const pair = (t) => {
       const m = (t || '').match(/(-?\d+)\s*\/\s*(-?\d+)/);
       return m ? [Number(m[1]), Number(m[2])] : [null, null];
     };
     const rows = [];
-    for (const tr of box.querySelectorAll('tr')) {
+    for (const tr of box.querySelectorAll('.row')) {
       const cells = [...tr.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim());
-      const teamA = tr.querySelector('a[href*="/p/team"]');
-      if (!teamA) continue;
+      const teamCell = tr.querySelector('.cell.team');
+      if (!teamCell) continue;
+      const teamName = (teamCell.querySelector('a')?.textContent || teamCell.textContent).replace(/\s+/g, ' ').trim();
       // Tras equipo y coach: PJ, V/E/D, TD, Cas, puntaje, delta (en ese orden)
       const rest = cells.filter((_, i) => i >= 0);
       const wdl = rest.find((t) => /^\d+\s*\/\s*\d+\s*\/\s*\d+$/.test(t));
@@ -304,7 +302,7 @@ async function fetchStandings(page) {
       const [tdf, tda] = pair(rest[idx + 1]);
       const [casf, casa] = pair(rest[idx + 2]);
       rows.push({
-        team: teamA.textContent.trim(),
+        team: teamName,
         games: Number(rest[idx - 1]),
         wins: w, draws: d, losses: l,
         td_for: tdf, td_against: tda,
