@@ -1115,6 +1115,133 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 .st-team { display: block; font-weight: 700; }
 .st-coach { display: block; font-size: 11px; color: var(--ink-soft); }
 
+/* ---------- Líderes ---------- */
+.leaders-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.leader-col {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  min-width: 0;
+}
+
+.leader-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.leader-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leader-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color .14s ease;
+}
+
+.leader-list li:hover { background: var(--blood-tint); }
+.leader-list li.leader-empty { cursor: default; color: var(--ink-soft); font-size: 13px; }
+.leader-list li.leader-empty:hover { background: none; }
+
+.leader-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leader-name small {
+  font-weight: 400;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leader-num {
+  flex-shrink: 0;
+  font-weight: 800;
+  color: var(--blood-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Salón de los caídos ---------- */
+.fallen-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.fallen-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: background-color .14s ease;
+}
+
+.fallen-list li + li { border-top: 1px solid var(--line); }
+.fallen-list li:hover { background: var(--blood-tint); }
+
+.fallen-ico { font-size: 20px; flex-shrink: 0; }
+
+.fallen-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.fallen-txt small { color: var(--ink-soft); font-size: 11px; }
+
+/* ---------- Recap / fecha jugada del partido ---------- */
+.m-recap {
+  margin: -4px 0 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.m-played {
+  margin: -8px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
 /* ---------- Enlaces de la ficha ---------- */
 .d-links { display: flex; gap: 14px; flex-wrap: wrap; }
 
@@ -1125,6 +1252,7 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
   font: 600 12px/1 Inter, system-ui, sans-serif;
   color: var(--blood);
   cursor: pointer;
+  text-decoration: none;
   border-bottom: 1px dashed color-mix(in srgb, var(--blood) 45%, transparent);
   transition: color .14s ease, border-color .14s ease;
 }
@@ -1161,6 +1289,8 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
   .site-head .sub { margin: 10px 0 16px; }
 
   .section { margin-top: 28px; }
+
+  .leaders-grid { grid-template-columns: 1fr; }
 
   /* Partidos: se apilan en vertical */
   .fixture { grid-template-columns: 1fr; }

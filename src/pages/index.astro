@@ -10,6 +10,20 @@ import {
 
 const byId = new Map(coaches.map((c) => [c.id, c]));
 
+// Mantener en sync con RACE_ICON del <script> más abajo.
+const RACE_ICON: Record<string, string> = {
+  'High Elf': '🏹',
+  'Dark Elf': '🗡️',
+  Snotling: '🍄',
+  'Chaos Dwarf': '⚒️',
+  Bretonnian: '🐎',
+  'Necromantic Horror': '☠️',
+  'Shambling Undead': '🧟',
+  Goblin: '👺',
+  'Old World Alliance': '🛡️',
+};
+const raceIcon = (race: string) => RACE_ICON[race] ?? '🏈';
+
 const enriched = coaches.map((c) => {
   const rid = rivalId(c.id);
   return {
@@ -156,6 +170,31 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       <p class="results-empty" id="standings-empty">Aún no hay resultados registrados.</p>
     </section>
 
+    <section class="section" id="sec-leaders">
+      <h2>Líderes <span class="count" id="leaders-count"></span></h2>
+      <div class="leaders-grid" hidden>
+        <div class="leader-col">
+          <p class="leader-title">🏈 Más touchdowns</p>
+          <ol class="leader-list" id="leaders-td"></ol>
+        </div>
+        <div class="leader-col">
+          <p class="leader-title">💥 Más bajas</p>
+          <ol class="leader-list" id="leaders-cas"></ol>
+        </div>
+        <div class="leader-col">
+          <p class="leader-title">⭐ Más MVP</p>
+          <ol class="leader-list" id="leaders-mvp"></ol>
+        </div>
+      </div>
+      <p class="results-empty" id="leaders-empty">Aún no hay resultados registrados.</p>
+    </section>
+
+    <section class="section" id="sec-fallen">
+      <h2>Salón de los caídos <span class="count" id="fallen-count"></span></h2>
+      <ul class="fallen-list" id="fallen-list" hidden></ul>
+      <p class="results-empty" id="fallen-empty">Nadie ha caído... todavía.</p>
+    </section>
+
     <section class="section" id="sec-roster">
       <h2>Jugadores <span class="count">{roster.length}</span></h2>
       <p class="legend">
@@ -170,7 +209,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
               <span class="status-dot" data-state="empty" aria-hidden="true"></span>
               <span class="roster-main">
                 <span class="js-name">{c.fumbbl_coach}</span>
-                <span class="roster-sub">{c.team_name} · {c.race}</span>
+                <span class="roster-sub">{c.team_name} · {raceIcon(c.race)} {c.race}</span>
               </span>
               <span class="roster-handle">@{c.fumbbl_coach}</span>
             </button>
@@ -235,6 +274,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       <button class="m-close" type="button" aria-label="Cerrar">✕</button>
       <p class="d-eyebrow" id="match-round-label">{currentRoundLabel}</p>
       <h2 class="m-title"></h2>
+      <p class="m-recap" hidden></p>
+      <p class="m-played" hidden></p>
 
       <label>
         Día y hora
@@ -274,6 +315,10 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       <div class="d-actions">
         <a class="wa-btn m-remind-home disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer"></a>
         <a class="wa-btn m-remind-away disabled" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer"></a>
+      </div>
+
+      <div class="d-links">
+        <a class="linkbtn m-fumbbl-link" hidden target="_blank" rel="noopener noreferrer">Ver en FUMBBL ↗</a>
       </div>
 
       <div class="d-foot">
@@ -345,6 +390,11 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     label: string;
     fixtures: FixtureInfo[];
   }
+  interface CasualtyEvent {
+    team_id: string;
+    player: string;
+    outcome: string;
+  }
   interface MatchRow {
     id: string;
     round?: string | null;
@@ -357,6 +407,11 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     td_away: number | null;
     cas_home: number | null;
     cas_away: number | null;
+    mvp_home?: string | null;
+    mvp_away?: string | null;
+    played_at?: string | null;
+    fumbbl_match_id?: string | null;
+    casualties?: CasualtyEvent[] | null;
     note: string | null;
     updated_at?: string | null;
   }
@@ -486,6 +541,21 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     return state.get(id)?.real_name || c.fumbbl_coach;
   }
 
+  const RACE_ICON: Record<string, string> = {
+    'High Elf': '🏹',
+    'Dark Elf': '🗡️',
+    Snotling: '🍄',
+    'Chaos Dwarf': '⚒️',
+    Bretonnian: '🐎',
+    'Necromantic Horror': '☠️',
+    'Shambling Undead': '🧟',
+    Goblin: '👺',
+    'Old World Alliance': '🛡️',
+  };
+  function raceIcon(race: string): string {
+    return RACE_ICON[race] ?? '🏈';
+  }
+
   // -------- Clasificación --------
   function renderStandings() {
     const body = document.getElementById('standings-body');
@@ -556,6 +626,127 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
           `<td class="c-cas">${sign(s.casd)}</td>` +
           `<td class="c-pts">${s.pts}</td>` +
           `</tr>`
+        );
+      })
+      .join('');
+  }
+
+  // -------- Líderes: TD, bajas, MVP --------
+  function renderLeaders() {
+    const tdList = document.getElementById('leaders-td');
+    const casList = document.getElementById('leaders-cas');
+    const mvpList = document.getElementById('leaders-mvp');
+    const empty = document.getElementById('leaders-empty');
+    const count = document.getElementById('leaders-count');
+    const grid = document.querySelector<HTMLElement>('.leaders-grid');
+    if (!tdList || !casList || !mvpList) return;
+
+    const tdOf = new Map<string, number>();
+    const casOf = new Map<string, number>();
+    const mvpOf = new Map<string, number>(); // clave: "<teamId>::<jugador>"
+    let anyResult = false;
+
+    for (const m of mstate.values()) {
+      if (!m.home_id || !m.away_id) continue;
+      if (m.td_home == null && m.td_away == null) continue;
+      anyResult = true;
+      tdOf.set(m.home_id, (tdOf.get(m.home_id) ?? 0) + (m.td_home ?? 0));
+      tdOf.set(m.away_id, (tdOf.get(m.away_id) ?? 0) + (m.td_away ?? 0));
+      casOf.set(m.home_id, (casOf.get(m.home_id) ?? 0) + (m.cas_home ?? 0));
+      casOf.set(m.away_id, (casOf.get(m.away_id) ?? 0) + (m.cas_away ?? 0));
+      if (m.mvp_home) {
+        const k = `${m.home_id}::${m.mvp_home}`;
+        mvpOf.set(k, (mvpOf.get(k) ?? 0) + 1);
+      }
+      if (m.mvp_away) {
+        const k = `${m.away_id}::${m.mvp_away}`;
+        mvpOf.set(k, (mvpOf.get(k) ?? 0) + 1);
+      }
+    }
+
+    if (grid) grid.hidden = !anyResult;
+    if (empty) empty.hidden = anyResult;
+    if (count) count.textContent = anyResult ? '' : '';
+
+    const top = (map: Map<string, number>, n: number) =>
+      [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
+
+    const teamRow = (id: string, n: number, unit: string) => {
+      const c = cmap.get(id);
+      if (!c) return '';
+      return (
+        `<li data-open="${esc(id)}"><span class="leader-name">${esc(coachLabel(id))}` +
+        `<small>${esc(c.team_name)}</small></span><span class="leader-num">${n}${unit}</span></li>`
+      );
+    };
+
+    tdList.innerHTML = top(tdOf, 3)
+      .map(([id, n]) => teamRow(id, n, ''))
+      .join('') || '<li class="leader-empty">—</li>';
+    casList.innerHTML = top(casOf, 3)
+      .map(([id, n]) => teamRow(id, n, ''))
+      .join('') || '<li class="leader-empty">—</li>';
+    mvpList.innerHTML =
+      top(mvpOf, 3)
+        .filter(([, n]) => n >= 1)
+        .map(([key, n]) => {
+          const [teamId, player] = key.split('::');
+          const c = cmap.get(teamId);
+          if (!c) return '';
+          return (
+            `<li data-open="${esc(teamId)}"><span class="leader-name">${esc(player)}` +
+            `<small>${esc(c.team_name)}</small></span><span class="leader-num">${n}×</span></li>`
+          );
+        })
+        .join('') || '<li class="leader-empty">—</li>';
+  }
+
+  // -------- Salón de los caídos --------
+  const OUTCOME_ICON: Record<string, string> = {
+    Dead: '💀',
+    'Seriously Hurt': '🤕',
+    'Badly Hurt': '🩹',
+  };
+  function outcomeIcon(outcome: string): string {
+    const key = Object.keys(OUTCOME_ICON).find((k) => outcome.startsWith(k));
+    return key ? OUTCOME_ICON[key] : '🏥';
+  }
+
+  function renderFallen() {
+    const list = document.getElementById('fallen-list');
+    const empty = document.getElementById('fallen-empty');
+    const count = document.getElementById('fallen-count');
+    if (!list) return;
+
+    type Event = { teamId: string; player: string; outcome: string; when: string | null; round: string };
+    const events: Event[] = [];
+    for (const m of mstate.values()) {
+      if (!m.casualties?.length) continue;
+      for (const ev of m.casualties) {
+        events.push({
+          teamId: ev.team_id,
+          player: ev.player,
+          outcome: ev.outcome,
+          when: m.played_at ?? null,
+          round: m.round ?? '',
+        });
+      }
+    }
+    events.sort((a, b) => (b.when ?? '').localeCompare(a.when ?? ''));
+
+    if (count) count.textContent = events.length ? String(events.length) : '';
+    if (empty) empty.hidden = events.length > 0;
+    list.hidden = events.length === 0;
+
+    list.innerHTML = events
+      .map((ev) => {
+        const c = cmap.get(ev.teamId);
+        return (
+          `<li data-open="${esc(ev.teamId)}">` +
+          `<span class="fallen-ico" aria-hidden="true">${outcomeIcon(ev.outcome)}</span>` +
+          `<span class="fallen-txt"><strong>${esc(ev.player)}</strong> — ${esc(ev.outcome)}` +
+          `<small>${esc(c?.team_name ?? '')} · ${esc(ev.round)}</small></span>` +
+          `</li>`
         );
       })
       .join('');
@@ -736,6 +927,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     });
     updateRoundStatus();
     renderStandings();
+    renderLeaders();
+    renderFallen();
     renderMyMatch();
   }
 
@@ -831,7 +1024,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     if (!c) return;
     currentId = id;
     f.team.textContent = c.team_name;
-    f.meta.textContent = c.race;
+    f.meta.textContent = `${raceIcon(c.race)} ${c.race}`;
     f.coach.textContent = c.fumbbl_coach;
 
     if (c.rivalName && c.rivalId) {
@@ -953,6 +1146,9 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   const mq = <T extends HTMLElement>(sel: string) => dlgMatch.querySelector(sel) as T;
   const m = {
     title: mq<HTMLHeadingElement>('.m-title'),
+    recap: mq<HTMLParagraphElement>('.m-recap'),
+    played: mq<HTMLParagraphElement>('.m-played'),
+    fumbblLink: mq<HTMLAnchorElement>('.m-fumbbl-link'),
     datetime: mq<HTMLInputElement>('.m-datetime'),
     homeLabels: dlgMatch.querySelectorAll<HTMLElement>('.m-home'),
     awayLabels: dlgMatch.querySelectorAll<HTMLElement>('.m-away'),
@@ -1006,6 +1202,21 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     });
   }
 
+  function matchRecap(fx: FixtureInfo, r: MatchRow): string | null {
+    if (r.td_home == null || r.td_away == null) return null;
+    const h = r.td_home,
+      a = r.td_away;
+    const verb =
+      h > a ? `${fx.home_team} venció a ${fx.away_team}` : a > h
+        ? `${fx.away_team} venció a ${fx.home_team}`
+        : `${fx.home_team} empató con ${fx.away_team}`;
+    const casTotal = (r.cas_home ?? 0) + (r.cas_away ?? 0);
+    const casTxt = casTotal > 0 ? `, con ${casTotal} baja${casTotal === 1 ? '' : 's'} en total` : '';
+    const mvps = [r.mvp_home, r.mvp_away].filter(Boolean);
+    const mvpTxt = mvps.length ? ` MVP: ${mvps.join(' / ')}.` : '';
+    return `${verb} ${h}-${a}${casTxt}.${mvpTxt}`;
+  }
+
   function openMatch(fixtureId: string) {
     const fx = fmap.get(fixtureId);
     if (!fx) return;
@@ -1025,6 +1236,31 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     m.casHome.value = r?.cas_home != null ? String(r.cas_home) : '';
     m.casAway.value = r?.cas_away != null ? String(r.cas_away) : '';
     m.note.value = r?.note ?? '';
+
+    const recap = r ? matchRecap(fx, r) : null;
+    m.recap.hidden = !recap;
+    m.recap.textContent = recap ?? '';
+
+    if (r?.played_at) {
+      m.played.hidden = false;
+      m.played.textContent =
+        '🗓️ Jugado el ' +
+        new Date(r.played_at).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
+    } else {
+      m.played.hidden = true;
+    }
+
+    if (r?.fumbbl_match_id) {
+      m.fumbblLink.hidden = false;
+      m.fumbblLink.href = `https://fumbbl.com/p/match?id=${r.fumbbl_match_id}`;
+    } else {
+      m.fumbblLink.hidden = true;
+    }
+
     m.updated.textContent = r?.updated_at
       ? 'Actualizado ' +
         new Date(r.updated_at).toLocaleDateString('es-ES', {
@@ -1082,7 +1318,11 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       m.st.className = 'm-status err';
       return;
     }
-    mstate.set(currentFixture, { ...payload, updated_at: new Date().toISOString() });
+    mstate.set(currentFixture, {
+      ...(mstate.get(currentFixture) ?? {}),
+      ...payload,
+      updated_at: new Date().toISOString(),
+    });
     m.st.textContent = 'Guardado ✓';
     m.st.className = 'm-status ok';
     m.updated.textContent = 'Actualizado ahora';
@@ -1122,12 +1362,14 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       `<li><button class="roster-item" type="button" data-id="${esc(c.id)}" data-open="${esc(c.id)}">` +
       `<span class="status-dot" data-state="${statusOf(c.id)}" aria-hidden="true"></span>` +
       `<span class="roster-main"><span class="js-name">${esc(name)}</span>` +
-      `<span class="roster-sub">${esc(c.team_name)} · ${esc(c.race)}</span></span>` +
+      `<span class="roster-sub">${esc(c.team_name)} · ${raceIcon(c.race)} ${esc(c.race)}</span></span>` +
       `<span class="roster-handle">@${esc(c.fumbbl_coach)}</span></button></li>`
     );
   }
 
   const secStandings = document.getElementById('sec-standings') as HTMLElement;
+  const secLeaders = document.getElementById('sec-leaders') as HTMLElement;
+  const secFallen = document.getElementById('sec-fallen') as HTMLElement;
 
   function runSearch() {
     const term = search.value.toLowerCase().trim();
@@ -1135,6 +1377,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       secResults.hidden = true;
       secRound.hidden = false;
       secStandings.hidden = false;
+      secLeaders.hidden = false;
+      secFallen.hidden = false;
       secRoster.hidden = false;
       renderMyMatch();
       return;
@@ -1158,6 +1402,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     secResults.hidden = false;
     secRound.hidden = true;
     secStandings.hidden = true;
+    secLeaders.hidden = true;
+    secFallen.hidden = true;
     secRoster.hidden = true;
     document.getElementById('mi-partido')!.hidden = true;
     paintList();
@@ -1185,6 +1431,16 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     if (tr) openDetail(tr.dataset.open!);
   });
 
+  // ================= Líderes / Salón de los caídos: click en fila =================
+  document.getElementById('sec-leaders')!.addEventListener('click', (e) => {
+    const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
+    if (li) openDetail(li.dataset.open!);
+  });
+  document.getElementById('fallen-list')!.addEventListener('click', (e) => {
+    const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
+    if (li) openDetail(li.dataset.open!);
+  });
+
   function openFromHash() {
     const h = decodeURIComponent((location.hash || '').slice(1));
     if (!h) return;
@@ -1199,7 +1455,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       supabase
         .from('matches')
         .select(
-          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, note, updated_at',
+          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, mvp_home, mvp_away, played_at, fumbbl_match_id, casualties, note, updated_at',
         ),
     ]);
 

@@ -96,9 +96,17 @@ del torneo en FUMBBL con un navegador real (la página tiene protección anti-bo
 
 - Si hay una **ronda nueva** que no está en `schedule.ts`, la añade (hay que commitear + pushear ese cambio).
 - Para cada partido ya **cerrado** en FUMBBL (con marcador), entra a su ficha de partido y sube a Supabase el
-  **resultado (TD) y las bajas (Cas)**. Un partido cerrado en FUMBBL no cambia nunca, así que ese dato manda
-  siempre y pisa lo que hubiera antes (incluida una carga a mano equivocada). **Nota** y **fecha/hora** son
-  cosas que solo existen en la web —FUMBBL no las tiene— y esas nunca se tocan.
+  **resultado (TD), las bajas (Cas), el MVP de cada lado, la lista de jugadores muertos/heridos graves y cuándo
+  se jugó de verdad**. Un partido cerrado en FUMBBL no cambia nunca, así que ese dato manda siempre y pisa lo
+  que hubiera antes (incluida una carga a mano equivocada). **Nota** y **fecha/hora agendada** son cosas que
+  solo existen en la web —FUMBBL no las tiene— y esas nunca se tocan.
+
+Con esos datos la web arma solita: un mini-ranking de **líderes** (más touchdowns, más bajas, más veces MVP),
+un **recap** de una línea por partido ("Equipo A venció a Equipo B 3-1..."), un **"Salón de los caídos"** con
+las bajas graves del torneo, y un enlace directo a la ficha del partido en FUMBBL.
+
+Antes de la primera corrida hay que ejecutar, una sola vez, en Supabase → SQL Editor:
+[`supabase/fumbbl-extras.sql`](supabase/fumbbl-extras.sql) (agrega las columnas nuevas a `matches`).
 
 El script vive en [`automation/`](automation), separado del sitio (Astro) para no meterle Playwright al build de la web.
 
@@ -161,6 +169,7 @@ public/
 supabase/
   schema.sql            tabla coaches + semilla
   matches.sql           tabla matches (día/hora + resultado)
+  fumbbl-extras.sql     columnas de mvp/bajas nombradas/fecha jugada/id de FUMBBL
 automation/
   sync-fumbbl.mjs       lee FUMBBL y sincroniza rondas/resultados
   run-sync.ps1          envoltorio para la tarea programada (con log)

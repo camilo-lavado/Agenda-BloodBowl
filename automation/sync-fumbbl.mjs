@@ -5,11 +5,13 @@
 //  3. Si hay una ronda que no está en src/data/schedule.ts, la añade ahí
 //     (eso sí necesita un commit + deploy para que se vea).
 //  4. Para cada partido ya cerrado (con marcador), entra a su ficha de
-//     partido en FUMBBL y lee también las bajas (cas) que hizo cada equipo.
-//  5. Sube a Supabase el marcador (TD) y las bajas (cas) de esos partidos.
-//     Un partido cerrado en FUMBBL no cambia nunca, así que ese dato manda
-//     siempre y pisa lo que hubiera antes. "Nota" y "Fecha/hora" son cosas
-//     que solo existen en la web (FUMBBL no las tiene) y nunca se tocan.
+//     partido en FUMBBL y lee bajas (cas), MVP de cada lado, la lista de
+//     jugadores muertos/heridos graves y cuándo se jugó de verdad.
+//  5. Sube todo eso a Supabase (marcador, bajas, mvp, bajas nombradas,
+//     fecha jugada, id de partido de FUMBBL). Un partido cerrado en FUMBBL
+//     no cambia nunca, así que ese dato manda siempre y pisa lo que hubiera
+//     antes. "Nota" y "Fecha/hora agendada" son cosas que solo existen en
+//     la web (FUMBBL no las tiene) y esas nunca se tocan.
 //
 // Uso: SUPABASE_URL=... SUPABASE_ANON_KEY=... node sync-fumbbl.mjs
 // (o deja un archivo automation/.env con esas dos líneas y corre "node sync-fumbbl.mjs" a secas;
@@ -141,24 +143,69 @@ async function fetchSchedule(page) {
   });
 }
 
-// -------- FUMBBL: bajas (cas) de un partido ya cerrado --------
+// -------- FUMBBL: detalle de un partido ya cerrado --------
 // "cas" en la fila TOTALS de la tabla de un equipo = bajas que HIZO ese
-// equipo en ese partido (no las que sufrió).
-async function fetchCasualties(page, matchId) {
+// equipo en ese partido (no las que sufrió). "mvp"=1 en la fila de un
+// jugador = ese equipo lo nombró su MVP. Las líneas "#N Jugador – Estado"
+// (Dead (RIP), Seriously Hurt (MNG), etc.) son texto suelto dentro del
+// bloque de cada equipo, no elementos aparte.
+async function fetchMatchDetails(page, matchId, homeId, awayId) {
   await openPastAnubis(page, `${BASE_URL}/p/match?id=${matchId}`, {
     checkSelector: '.performancecontainer.home',
     maxAttempts: 3,
   });
-  return page.evaluate(() => {
-    const casOf = (side) => {
-      const foot = document.querySelector(`.performancecontainer.${side} .player.foot`);
-      const cell = foot?.querySelector('.cas');
-      if (!cell) return null;
-      const txt = cell.textContent.trim();
-      return txt === '' || txt === '-' ? 0 : Number(txt);
-    };
-    return { cas_home: casOf('home'), cas_away: casOf('away') };
-  });
+  return page.evaluate(
+    ({ homeId, awayId }) => {
+      const casOf = (side) => {
+        const foot = document.querySelector(`.performancecontainer.${side} .player.foot`);
+        const cell = foot?.querySelector('.cas');
+        if (!cell) return null;
+        const txt = cell.textContent.trim();
+        return txt === '' || txt === '-' ? 0 : Number(txt);
+      };
+      const mvpOf = (side) => {
+        const container = document.querySelector(`.performancecontainer.${side}`);
+        if (!container) return null;
+        const rows = [...container.querySelectorAll('.player')].filter(
+          (r) => !r.classList.contains('foot') && !r.classList.contains('head'),
+        );
+        for (const row of rows) {
+          if (row.querySelector('.mvp')?.textContent.trim() === '1') {
+            return row.querySelector('.name')?.textContent.trim() || null;
+          }
+        }
+        return null;
+      };
+      const casualtiesOf = (side, teamId) => {
+        const container = document.querySelector(`.performancecontainer.${side}`);
+        if (!container || !teamId) return [];
+        const out = [];
+        const re = /#\d+\s+([^–<]+?)\s*–\s*([^<]+)/g;
+        let m;
+        while ((m = re.exec(container.innerHTML))) {
+          out.push({ team_id: teamId, player: m[1].trim(), outcome: m[2].trim() });
+        }
+        return out;
+      };
+      const timeEl = [...document.querySelectorAll('.time')].find((e) =>
+        /Match recorded on/i.test(e.textContent || ''),
+      );
+      const dateMatch = (timeEl?.textContent || '').match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+      // Hora de servidor de FUMBBL; se asume UTC (no hay forma de confirmar
+      // el huso exacto). Es un dato secundario, no afecta resultado/bajas.
+      const played_at = dateMatch ? dateMatch[1].replace(' ', 'T') + 'Z' : null;
+
+      return {
+        cas_home: casOf('home'),
+        cas_away: casOf('away'),
+        mvp_home: mvpOf('home'),
+        mvp_away: mvpOf('away'),
+        casualties: [...casualtiesOf('home', homeId), ...casualtiesOf('away', awayId)],
+        played_at,
+      };
+    },
+    { homeId, awayId },
+  );
 }
 
 // FUMBBL a veces trunca nombres largos en la celda del calendario
@@ -208,7 +255,7 @@ function ensureRoundInSchedule(key, label, pairs) {
 // -------- Supabase --------
 async function supabaseGetExisting() {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away`,
+    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,mvp_home,mvp_away,played_at,fumbbl_match_id`,
     { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
   );
   if (!res.ok) throw new Error(`Supabase GET falló: ${res.status} ${await res.text()}`);
@@ -278,12 +325,19 @@ async function main() {
         const isClosed = m.td_home != null && m.td_away != null;
         if (!isClosed) continue;
 
-        let cas = { cas_home: null, cas_away: null };
+        let details = {
+          cas_home: null,
+          cas_away: null,
+          mvp_home: null,
+          mvp_away: null,
+          casualties: null,
+          played_at: null,
+        };
         if (m.matchId) {
           try {
-            cas = await fetchCasualties(page, m.matchId);
+            details = await fetchMatchDetails(page, m.matchId, homeId, awayId);
           } catch (err) {
-            console.warn(`⚠️  No pude leer bajas del partido ${m.matchId} (${m.home} vs ${m.away}): ${err.message}`);
+            console.warn(`⚠️  No pude leer el detalle del partido ${m.matchId} (${m.home} vs ${m.away}): ${err.message}`);
           }
         }
 
@@ -293,8 +347,12 @@ async function main() {
           !prev ||
           prev.td_home !== m.td_home ||
           prev.td_away !== m.td_away ||
-          (cas.cas_home != null && prev.cas_home !== cas.cas_home) ||
-          (cas.cas_away != null && prev.cas_away !== cas.cas_away);
+          prev.fumbbl_match_id !== (m.matchId ?? null) ||
+          (details.cas_home != null && prev.cas_home !== details.cas_home) ||
+          (details.cas_away != null && prev.cas_away !== details.cas_away) ||
+          (details.mvp_home != null && prev.mvp_home !== details.mvp_home) ||
+          (details.mvp_away != null && prev.mvp_away !== details.mvp_away) ||
+          (details.played_at != null && prev.played_at !== details.played_at);
 
         if (changed) {
           const payload = {
@@ -307,9 +365,14 @@ async function main() {
             td_home: m.td_home,
             td_away: m.td_away,
           };
+          if (m.matchId) payload.fumbbl_match_id = m.matchId;
           // Solo se incluyen (y por lo tanto se escriben) si se pudieron leer.
-          if (cas.cas_home != null) payload.cas_home = cas.cas_home;
-          if (cas.cas_away != null) payload.cas_away = cas.cas_away;
+          if (details.cas_home != null) payload.cas_home = details.cas_home;
+          if (details.cas_away != null) payload.cas_away = details.cas_away;
+          if (details.mvp_home != null) payload.mvp_home = details.mvp_home;
+          if (details.mvp_away != null) payload.mvp_away = details.mvp_away;
+          if (details.played_at != null) payload.played_at = details.played_at;
+          if (details.casualties != null) payload.casualties = details.casualties;
           matchPayloads.push(payload);
         }
       }
