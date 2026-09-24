@@ -37,6 +37,19 @@ export const rounds: RoundDef[] = [
       ['olor-a-pescao', 'necrotasting'],
     ],
   },
+  {
+    key: 'r3',
+    label: 'Ronda 3',
+    pairs: [
+      ['la-orden-del-santo-pernil', 'les-chevaliers'],
+      ['defensores-de-ulthuan', 'boumboumboum'],
+      ['red-corsairs', 'desert-eagles'],
+      ['limari-zigurratz', 'a-tut-voyage'],
+      ['olor-a-pescao', 'caballeros-de-dol-amroth'],
+      ['alianza-mafiosa', 'necrotasting'],
+      ['dead-drunks', 'goblins-sea-shanties'],
+    ],
+  },
 ];
 
 export const currentRound = rounds[rounds.length - 1];
