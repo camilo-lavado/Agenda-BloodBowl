@@ -12,15 +12,33 @@
 //     que solo existen en la web (FUMBBL no las tiene) y nunca se tocan.
 //
 // Uso: SUPABASE_URL=... SUPABASE_ANON_KEY=... node sync-fumbbl.mjs
+// (o deja un archivo automation/.env con esas dos líneas y corre "node sync-fumbbl.mjs" a secas;
+//  útil para una tarea programada local, donde no hay un shell con variables de entorno).
 
 import { chromium } from 'playwright';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCHEDULE_PATH = path.join(__dirname, '..', 'src', 'data', 'schedule.ts');
 const COACHES_PATH = path.join(__dirname, '..', 'src', 'data', 'coaches.ts');
+const ENV_PATH = path.join(__dirname, '.env');
+
+// Carga automation/.env si existe (sin dependencias externas). No pisa
+// variables que ya vengan puestas en el entorno (GitHub Actions, por ejemplo).
+function loadDotEnv(file) {
+  if (!existsSync(file)) return;
+  for (const line of readFileSync(file, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([\w.]+)\s*=\s*(.*)?\s*$/);
+    if (!m) continue;
+    const key = m[1];
+    let val = (m[2] ?? '').trim();
+    if (/^".*"$/.test(val) || /^'.*'$/.test(val)) val = val.slice(1, -1);
+    if (!(key in process.env)) process.env[key] = val;
+  }
+}
+loadDotEnv(ENV_PATH);
 
 const BASE_URL = 'https://fumbbl.com';
 const TOURNAMENT_URL = `${BASE_URL}/p/group?op=view&group=15266&p=tournaments`;

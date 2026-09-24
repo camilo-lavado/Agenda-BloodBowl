@@ -90,12 +90,11 @@ guardados no se tocan.
 
 ## Sincronización automática con FUMBBL
 
-Un workflow de GitHub Actions ([`.github/workflows/sync-fumbbl.yml`](.github/workflows/sync-fumbbl.yml))
-corre todos los días, lee el calendario del torneo en FUMBBL con un navegador
-real (la página tiene protección anti-bots que bloquea un `curl`/`fetch`
-normal) y:
+Hay un script ([`automation/sync-fumbbl.mjs`](automation/sync-fumbbl.mjs)) que lee el calendario
+del torneo en FUMBBL con un navegador real (la página tiene protección anti-bots que bloquea un
+`curl`/`fetch` normal) y:
 
-- Si hay una **ronda nueva** que no está en `schedule.ts`, la añade y hace commit + push (dispara el redeploy).
+- Si hay una **ronda nueva** que no está en `schedule.ts`, la añade (hay que commitear + pushear ese cambio).
 - Para cada partido ya **cerrado** en FUMBBL (con marcador), entra a su ficha de partido y sube a Supabase el
   **resultado (TD) y las bajas (Cas)**. Un partido cerrado en FUMBBL no cambia nunca, así que ese dato manda
   siempre y pisa lo que hubiera antes (incluida una carga a mano equivocada). **Nota** y **fecha/hora** son
@@ -103,20 +102,48 @@ normal) y:
 
 El script vive en [`automation/`](automation), separado del sitio (Astro) para no meterle Playwright al build de la web.
 
-**Configuración (una vez):** en GitHub → tu repo → *Settings → Secrets and variables → Actions*,
-añade dos secrets con los mismos valores que tu `.env`:
+### Corre como tarea programada en un computador (no en GitHub Actions)
 
-- `PUBLIC_SUPABASE_URL`
-- `PUBLIC_SUPABASE_ANON_KEY`
+Se intentó primero como workflow de GitHub Actions con un cron diario, pero **FUMBBL bloquea a
+nivel de red las conexiones desde los runners de GitHub** (IP de datacenter) — se confirmó con
+`net::ERR_TIMED_OUT` en varias corridas, no es un tema de tiempo de espera ni de disfrazar el
+navegador. El workflow ([`.github/workflows/sync-fumbbl.yml`](.github/workflows/sync-fumbbl.yml))
+se dejó con disparo manual (`workflow_dispatch`) por si algún día se agrega un runner
+*self-hosted* desde una IP que sí funcione, pero **el cron automático está desactivado**.
 
-Da igual si los guardas como *Repository secrets* o dentro de un *Environment*
-(el workflow apunta al entorno `Production`); si usas otro nombre de entorno,
-ajusta la línea `environment:` en
-[`.github/workflows/sync-fumbbl.yml`](.github/workflows/sync-fumbbl.yml).
+En cambio, corre como **tarea programada de Windows** en un computador normal (probado y
+funcionando de verdad, no solo en teoría):
 
-Con eso el workflow ya corre solo. También se puede lanzar a mano desde la pestaña
-**Actions → Sync FUMBBL → Run workflow** (por ejemplo, justo después de que salga una ronda,
-en vez de esperar a la corrida diaria).
+1. `cd automation && npm install`
+2. Instala Chromium **dentro del proyecto** (no en el caché global — una tarea programada a veces
+   no lo encuentra ahí aunque exista):
+   ```powershell
+   $env:PLAYWRIGHT_BROWSERS_PATH = "0"
+   npx playwright install chromium
+   ```
+3. Copia `automation/.env.example` a `automation/.env` y pon ahí los mismos dos valores que en el
+   `.env` de la raíz (`SUPABASE_URL` y `SUPABASE_ANON_KEY`, sin el prefijo `PUBLIC_`).
+4. Registra la tarea (una vez; corre a diario a las 9:00, se ajusta con `-At`):
+   ```powershell
+   $scriptPath = "$PWD\automation\run-sync.ps1"
+   $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+     -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`""
+   $trigger = New-ScheduledTaskTrigger -Daily -At 9:00AM
+   $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd `
+     -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+   Register-ScheduledTask -TaskName "TastingBloodVI-SyncFUMBBL" -Action $action -Trigger $trigger `
+     -Settings $settings -Description "Sincroniza rondas y resultados de Tasting Blood VI desde FUMBBL a Supabase."
+   ```
+
+Con `StartWhenAvailable`, si el computador está apagado a esa hora simplemente se salta ese día
+(no rompe nada; la próxima corrida se pone al día sola). El resultado de cada corrida queda en
+[`automation/sync.log`](automation/sync.log) (no se sube al repo). Para lanzarlo a mano:
+`Start-ScheduledTask -TaskName "TastingBloodVI-SyncFUMBBL"`, o directamente `npm run sync` dentro
+de `automation/`.
+
+Si una corrida agrega una ronda nueva a `schedule.ts`, ese cambio queda en el working tree del
+computador — falta el `git commit` + `push` para que se despliegue (a diferencia de los resultados,
+que van directo a Supabase y se ven al toque sin deploy).
 
 ## Estructura
 
@@ -134,4 +161,8 @@ public/
 supabase/
   schema.sql            tabla coaches + semilla
   matches.sql           tabla matches (día/hora + resultado)
+automation/
+  sync-fumbbl.mjs       lee FUMBBL y sincroniza rondas/resultados
+  run-sync.ps1          envoltorio para la tarea programada (con log)
+  .env                  claves de Supabase para el script (no se sube)
 ```

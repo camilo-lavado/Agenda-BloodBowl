@@ -1,11 +1,13 @@
 name: Sync FUMBBL
 
+# DESACTIVADO el disparo automático (schedule): FUMBBL bloquea a nivel de red
+# las conexiones desde los runners de GitHub Actions (IP de datacenter) —
+# confirmado con net::ERR_TIMED_OUT en varias corridas, no es un tema de
+# tiempo de espera. La sincronización real corre ahora como tarea programada
+# en un computador normal (ver automation/run-sync.ps1 y el README). Este
+# workflow se deja con workflow_dispatch por si algún día se agrega un
+# runner "self-hosted" (con runs-on: self-hosted) desde una IP que sí pase.
 on:
-  schedule:
-    # Todos los días a las 12:00 UTC (~9:00 en Chile con horario de invierno,
-    # ~8:00 en verano). Sobra margen: cada ronda dura una semana. Ajusta la
-    # hora si quieres, o dispara el workflow a mano desde la pestaña Actions.
-    - cron: '0 12 * * *'
   workflow_dispatch: {}
 
 permissions:
