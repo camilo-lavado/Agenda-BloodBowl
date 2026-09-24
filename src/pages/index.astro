@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { coaches } from '../data/coaches';
+import { icon, raceIcon } from '../lib/icons';
 import {
   rounds,
   currentRoundLabel,
@@ -10,19 +11,6 @@ import {
 
 const byId = new Map(coaches.map((c) => [c.id, c]));
 
-// Mantener en sync con RACE_ICON del <script> más abajo.
-const RACE_ICON: Record<string, string> = {
-  'High Elf': '🏹',
-  'Dark Elf': '🗡️',
-  Snotling: '🍄',
-  'Chaos Dwarf': '⚒️',
-  Bretonnian: '🐎',
-  'Necromantic Horror': '☠️',
-  'Shambling Undead': '🧟',
-  Goblin: '👺',
-  'Old World Alliance': '🛡️',
-};
-const raceIcon = (race: string) => RACE_ICON[race] ?? '🏈';
 
 const enriched = coaches.map((c) => {
   const rid = rivalId(c.id);
@@ -104,9 +92,9 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       </h2>
       <div class="round-carousel">
         <div class="rc-head">
-          <button class="rc-nav rc-prev" type="button" aria-label="Ronda anterior" disabled={roundsData.length < 2}>‹</button>
+          <button class="rc-nav rc-prev" type="button" aria-label="Ronda anterior" disabled={roundsData.length < 2}><Fragment set:html={icon('chevron-left')} /></button>
           <span class="rc-label" id="round-carousel-label">{currentRoundLabel}</span>
-          <button class="rc-nav rc-next" type="button" aria-label="Ronda siguiente" disabled={roundsData.length < 2}>›</button>
+          <button class="rc-nav rc-next" type="button" aria-label="Ronda siguiente" disabled={roundsData.length < 2}><Fragment set:html={icon('chevron-right')} /></button>
         </div>
         <div class="rc-viewport">
           {roundsData.map((r, i) => (
@@ -174,45 +162,68 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     </section>
 
     <section class="section" id="sec-leaders">
-      <h2>Líderes <span class="count" id="leaders-count"></span></h2>
+      <h2 class="collapsible open" id="leaders-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="leaders-body">
+        <span class="chev" aria-hidden="true" set:html={icon('chevron-right')}></span>Líderes <span class="count" id="leaders-count"></span>
+      </h2>
+      <div id="leaders-body">
       <div class="leaders-grid" hidden>
         <div class="leader-col">
-          <p class="leader-title">🏈 Más touchdowns</p>
+          <p class="leader-title"><Fragment set:html={icon('goal')} /> Más touchdowns</p>
           <ol class="leader-list" id="leaders-td"></ol>
         </div>
         <div class="leader-col">
-          <p class="leader-title">💥 Más bajas</p>
+          <p class="leader-title"><Fragment set:html={icon('swords')} /> Más bajas</p>
           <ol class="leader-list" id="leaders-cas"></ol>
         </div>
         <div class="leader-col">
-          <p class="leader-title">🎯 Más pasador</p>
+          <p class="leader-title"><Fragment set:html={icon('target')} /> Más pasador</p>
           <ol class="leader-list" id="leaders-comp"></ol>
         </div>
         <div class="leader-col">
-          <p class="leader-title">⭐ MVP acumulado</p>
+          <p class="leader-title"><Fragment set:html={icon('star')} /> MVP acumulado</p>
           <ol class="leader-list" id="leaders-mvp"></ol>
         </div>
       </div>
       <p class="results-empty" id="leaders-empty">Aún no hay resultados registrados.</p>
+      </div>
     </section>
 
     <section class="section" id="sec-fallen">
       <h2 class="collapsible" id="fallen-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="fallen-body">
-        <span class="chev" aria-hidden="true">▸</span>Salón de los caídos <span class="count" id="fallen-count"></span>
+        <span class="chev" aria-hidden="true" set:html={icon('chevron-right')}></span>Salón de los caídos <span class="count" id="fallen-count"></span>
       </h2>
       <div id="fallen-body" hidden>
         <div class="leaders-grid fallen-summary" id="fallen-summary" hidden>
           <div class="leader-col">
-            <p class="leader-title">🩸 Equipos más golpeados</p>
+            <p class="leader-title"><Fragment set:html={icon('droplet')} /> Equipos más golpeados</p>
             <ol class="leader-list" id="fallen-teams"></ol>
           </div>
           <div class="leader-col">
-            <p class="leader-title">🍀 Jugadores más yetas</p>
+            <p class="leader-title"><Fragment set:html={icon('clover')} /> Jugadores más yetas</p>
             <ol class="leader-list" id="fallen-players"></ol>
           </div>
         </div>
         <ul class="fallen-list" id="fallen-list" hidden></ul>
         <p class="results-empty" id="fallen-empty">Nadie ha caído... todavía.</p>
+      </div>
+    </section>
+
+    <section class="section" id="sec-brutal">
+      <h2 class="collapsible" id="brutal-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="brutal-body">
+        <span class="chev" aria-hidden="true" set:html={icon('chevron-right')}></span>Brutalistas y asesinos <span class="count" id="brutal-count"></span>
+      </h2>
+      <div id="brutal-body" hidden>
+        <div class="leaders-grid" id="brutal-grid" hidden>
+          <div class="leader-col">
+            <p class="leader-title"><Fragment set:html={icon('axe')} /> Brutalistas (más bajas causadas)</p>
+            <ol class="leader-list" id="brutal-players"></ol>
+          </div>
+          <div class="leader-col">
+            <p class="leader-title"><Fragment set:html={icon('skull')} /> Asesinos (más muertes causadas)</p>
+            <ol class="leader-list" id="brutal-killers"></ol>
+          </div>
+        </div>
+        <p class="results-empty" id="brutal-empty">Aún no hay bajas registradas.</p>
       </div>
     </section>
 
@@ -230,7 +241,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
               <span class="status-dot" data-state="empty" aria-hidden="true"></span>
               <span class="roster-main">
                 <span class="js-name">{c.fumbbl_coach}</span>
-                <span class="roster-sub">{c.team_name} · {raceIcon(c.race)} {c.race}</span>
+                <span class="roster-sub">{c.team_name} · <Fragment set:html={raceIcon(c.race)} /> {c.race}</span>
               </span>
               <span class="roster-handle">@{c.fumbbl_coach}</span>
             </button>
@@ -247,7 +258,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   <!-- ==================== Ficha de contacto ==================== -->
   <dialog id="detail" class="detail">
     <div class="d-box">
-      <button class="d-close" type="button" aria-label="Cerrar">✕</button>
+      <button class="d-close" type="button" aria-label="Cerrar"><Fragment set:html={icon('x')} /></button>
       <p class="d-eyebrow">Contacto</p>
       <h2 class="d-team"></h2>
       <p class="d-meta"></p>
@@ -292,7 +303,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   <!-- ==================== Ficha de partido ==================== -->
   <dialog id="match" class="detail">
     <div class="d-box">
-      <button class="m-close" type="button" aria-label="Cerrar">✕</button>
+      <button class="m-close" type="button" aria-label="Cerrar"><Fragment set:html={icon('x')} /></button>
       <p class="d-eyebrow" id="match-round-label">{currentRoundLabel}</p>
       <h2 class="m-title"></h2>
       <p class="m-recap" hidden></p>
@@ -339,7 +350,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       </div>
 
       <div class="d-links">
-        <a class="linkbtn m-fumbbl-link" hidden target="_blank" rel="noopener noreferrer">Ver en FUMBBL ↗</a>
+        <a class="linkbtn m-fumbbl-link" hidden target="_blank" rel="noopener noreferrer">Ver en FUMBBL <Fragment set:html={icon('external-link')} /></a>
       </div>
 
       <div class="d-foot">
@@ -371,6 +382,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
 
 <script>
   import { createClient } from '@supabase/supabase-js';
+  import { icon, raceIcon } from '../lib/icons';
 
   const SUPABASE_URL = (import.meta.env.PUBLIC_SUPABASE_URL ?? '')
     .trim()
@@ -435,6 +447,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     played_at?: string | null;
     fumbbl_match_id?: string | null;
     casualties?: CasualtyEvent[] | null;
+    bashers?: { team_id: string; player: string; cas: number }[] | null;
     note: string | null;
     updated_at?: string | null;
   }
@@ -480,7 +493,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   if (!supabase) {
     banner.hidden = false;
     banner.innerHTML =
-      '⚠️ Supabase no está configurado. Añade <code>PUBLIC_SUPABASE_URL</code> y <code>PUBLIC_SUPABASE_ANON_KEY</code> y vuelve a desplegar. Puedes escribir, pero <strong>no se guarda</strong>.';
+      icon('triangle-alert') + ' Supabase no está configurado. Añade <code>PUBLIC_SUPABASE_URL</code> y <code>PUBLIC_SUPABASE_ANON_KEY</code> y vuelve a desplegar. Puedes escribir, pero <strong>no se guarda</strong>.';
   }
 
   // Normaliza a formato internacional sin «+». Casi todos son Chile (+56);
@@ -564,22 +577,14 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     return state.get(id)?.real_name || c.fumbbl_coach;
   }
 
-  const RACE_ICON: Record<string, string> = {
-    'High Elf': '🏹',
-    'Dark Elf': '🗡️',
-    Snotling: '🍄',
-    'Chaos Dwarf': '⚒️',
-    Bretonnian: '🐎',
-    'Necromantic Horror': '☠️',
-    'Shambling Undead': '🧟',
-    Goblin: '👺',
-    'Old World Alliance': '🛡️',
-  };
-  function raceIcon(race: string): string {
-    return RACE_ICON[race] ?? '🏈';
-  }
 
   // -------- Clasificación --------
+  type FStand = {
+    team_id: string; position: number; games: number; wins: number; draws: number; losses: number;
+    td_for: number; td_against: number; cas_for: number; cas_against: number; score: number;
+  };
+  let fumbblStandings: FStand[] = [];
+
   function renderStandings() {
     const body = document.getElementById('standings-body');
     const empty = document.getElementById('standings-empty');
@@ -617,7 +622,17 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       else { H.e++; A.e++; H.pts++; A.pts++; }
     }
 
-    const rows = [...T.values()]
+    // Si el sincronizador ya copió la tabla oficial de FUMBBL, se usa tal cual.
+    const official = fumbblStandings
+      .filter((f) => cmap.has(f.team_id))
+      .sort((a, b) => a.position - b.position)
+      .map((f) => ({
+        id: f.team_id, pj: f.games, g: f.wins, e: f.draws, p: f.losses,
+        tdf: f.td_for, tdc: f.td_against, casf: f.cas_for, casc: f.cas_against,
+        pts: f.score, tdd: f.td_for - f.td_against, casd: f.cas_for - f.cas_against,
+      }));
+
+    const rows = official.length ? official : [...T.values()]
       .map((s) => ({ ...s, tdd: s.tdf - s.tdc, casd: s.casf - s.casc }))
       .sort(
         (a, b) =>
@@ -707,18 +722,18 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       );
     };
 
-    tdList.innerHTML = top(tdOf, 3)
+    tdList.innerHTML = top(tdOf, 5)
       .map(([id, n]) => teamRow(id, n, ''))
       .join('') || '<li class="leader-empty">—</li>';
-    casList.innerHTML = top(casOf, 3)
+    casList.innerHTML = top(casOf, 5)
       .map(([id, n]) => teamRow(id, n, ''))
       .join('') || '<li class="leader-empty">—</li>';
-    compList.innerHTML = top(compOf, 3)
+    compList.innerHTML = top(compOf, 5)
       .filter(([, n]) => n > 0)
       .map(([id, n]) => teamRow(id, n, ''))
       .join('') || '<li class="leader-empty">—</li>';
     mvpList.innerHTML =
-      top(mvpOf, 3)
+      top(mvpOf, 5)
         .filter(([, n]) => n >= 1)
         .map(([key, n]) => {
           const [teamId, player] = key.split('::');
@@ -733,14 +748,11 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   }
 
   // -------- Salón de los caídos --------
-  const OUTCOME_ICON: Record<string, string> = {
-    Dead: '💀',
-    'Seriously Hurt': '🤕',
-    'Badly Hurt': '🩹',
-  };
   function outcomeIcon(outcome: string): string {
-    const key = Object.keys(OUTCOME_ICON).find((k) => outcome.startsWith(k));
-    return key ? OUTCOME_ICON[key] : '🏥';
+    if (outcome.startsWith('Dead')) return icon('skull', 'ico-dead');
+    if (outcome.startsWith('Seriously Hurt')) return icon('heart-crack', 'ico-hurt');
+    if (outcome.startsWith('Badly Hurt')) return icon('bandage', 'ico-hurt');
+    return icon('hospital', 'ico-hurt');
   }
 
   function renderFallen() {
@@ -768,7 +780,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     const isDead = (o: string) => o.startsWith('Dead');
     const deaths = events.filter((e) => isDead(e.outcome)).length;
     if (count) {
-      count.textContent = events.length ? `${events.length} · 💀 ${deaths}` : '';
+      count.innerHTML = events.length ? `${events.length} · ${icon('skull', 'ico-dead')} ${deaths}` : '';
     }
     if (empty) empty.hidden = events.length > 0;
     list.hidden = events.length === 0;
@@ -796,8 +808,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     }
     const score = (a: Agg) => a.dead * 2 + a.hurt; // la muerte pesa el doble
     const chips = (a: Agg) =>
-      (a.dead ? `<span class="fchip dead">💀 ${a.dead}</span>` : '') +
-      (a.hurt ? `<span class="fchip hurt">🤕 ${a.hurt}</span>` : '');
+      (a.dead ? `<span class="fchip dead">${icon('skull')} ${a.dead}</span>` : '') +
+      (a.hurt ? `<span class="fchip hurt">${icon('heart-crack')} ${a.hurt}</span>` : '');
 
     if (teamsEl) {
       teamsEl.innerHTML = [...byTeam.entries()]
@@ -838,6 +850,67 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
         );
       })
       .join('');
+  }
+
+  // -------- Brutalistas (bajas causadas por jugador) y asesinos (muertes por equipo) --------
+  function renderBrutal() {
+    const grid = document.getElementById('brutal-grid');
+    const empty = document.getElementById('brutal-empty');
+    const count = document.getElementById('brutal-count');
+    const playersEl = document.getElementById('brutal-players');
+    const killersEl = document.getElementById('brutal-killers');
+    if (!grid || !playersEl || !killersEl) return;
+
+    const byPlayer = new Map<string, { player: string; teamId: string; cas: number }>();
+    let totalCas = 0;
+    const kills = new Map<string, number>();
+    for (const m of mstate.values()) {
+      for (const b of m.bashers ?? []) {
+        const k = `${b.team_id}::${b.player}`;
+        const cur = byPlayer.get(k) ?? { player: b.player, teamId: b.team_id, cas: 0 };
+        cur.cas += b.cas;
+        byPlayer.set(k, cur);
+        totalCas += b.cas;
+      }
+      // Muerte en las bajas de un equipo = muerte causada por su rival.
+      if (!m.home_id || !m.away_id) continue;
+      for (const ev of m.casualties ?? []) {
+        if (!/^Dead/i.test(ev.outcome)) continue;
+        const killer = ev.team_id === m.home_id ? m.away_id : m.home_id;
+        kills.set(killer, (kills.get(killer) ?? 0) + 1);
+      }
+    }
+
+    const any = totalCas > 0 || kills.size > 0;
+    grid.hidden = !any;
+    if (empty) empty.hidden = any;
+    if (count) count.textContent = totalCas ? String(totalCas) : '';
+
+    playersEl.innerHTML =
+      [...byPlayer.values()]
+        .sort((a, b) => b.cas - a.cas || a.player.localeCompare(b.player))
+        .slice(0, 5)
+        .map((p) => {
+          const c = cmap.get(p.teamId);
+          return (
+            `<li data-open="${esc(p.teamId)}"><span class="leader-name">${esc(p.player)}` +
+            `<small>${esc(c?.team_name ?? '')}</small></span><span class="leader-num">${p.cas}</span></li>`
+          );
+        })
+        .join('') || '<li class="leader-empty">—</li>';
+
+    killersEl.innerHTML =
+      [...kills.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([id, n]) => {
+          const c = cmap.get(id);
+          return (
+            `<li data-open="${esc(id)}"><span class="leader-name">${esc(c?.team_name ?? id)}` +
+            `<small>${esc(coachLabel(id))}</small></span><span class="leader-num">${n}</span></li>`
+          );
+        })
+        .join('') || '<li class="leader-empty">—</li>';
   }
 
   // -------- "Soy" / Tu partido --------
@@ -1034,6 +1107,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     renderStandings();
     renderLeaders();
     renderFallen();
+    renderBrutal();
     renderMyMatch();
   }
 
@@ -1117,10 +1191,12 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     } else {
       note.hidden = false;
       const who = currentId ? coachLabel(currentId) : 'su dueño';
-      note.textContent =
-        me === ''
-          ? '🔒 Elige tu coach en «Soy» (arriba) para poder editar tu ficha.'
-          : `🔒 Solo ${who} o Camilo pueden editar esta ficha.`;
+      note.innerHTML =
+        icon('lock') +
+        ' ' +
+        (me === ''
+          ? 'Elige tu coach en «Soy» (arriba) para poder editar tu ficha.'
+          : `Solo ${esc(who)} o Camilo pueden editar esta ficha.`);
     }
   }
 
@@ -1177,7 +1253,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     if (!n) return flash(btn, 'Sin número');
     try {
       await navigator.clipboard.writeText('+' + n);
-      flash(btn, 'Copiado ✓');
+      flash(btn, 'Copiado');
     } catch {
       flash(btn, 'No se pudo');
     }
@@ -1188,7 +1264,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     const url = location.origin + location.pathname + '#' + encodeURIComponent(currentId);
     try {
       await navigator.clipboard.writeText(url);
-      flash(btn, 'Enlace copiado ✓');
+      flash(btn, 'Enlace copiado');
     } catch {
       flash(btn, 'No se pudo');
     }
@@ -1229,7 +1305,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       return;
     }
     state.set(currentId, { ...payload, updated_at: new Date().toISOString() });
-    f.st.textContent = 'Guardado ✓';
+    f.st.textContent = 'Guardado';
     f.st.className = 'card-status ok';
     f.updated.textContent = 'Actualizado ahora';
     paintList();
@@ -1348,8 +1424,8 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
 
     if (r?.played_at) {
       m.played.hidden = false;
-      m.played.textContent =
-        '🗓️ Jugado el ' +
+      m.played.innerHTML =
+        icon('calendar') + ' Jugado el ' +
         new Date(r.played_at).toLocaleDateString('es-ES', {
           day: '2-digit',
           month: 'short',
@@ -1428,7 +1504,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       ...payload,
       updated_at: new Date().toISOString(),
     });
-    m.st.textContent = 'Guardado ✓';
+    m.st.textContent = 'Guardado';
     m.st.className = 'm-status ok';
     m.updated.textContent = 'Actualizado ahora';
     paintFixtures();
@@ -1475,6 +1551,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
   const secStandings = document.getElementById('sec-standings') as HTMLElement;
   const secLeaders = document.getElementById('sec-leaders') as HTMLElement;
   const secFallen = document.getElementById('sec-fallen') as HTMLElement;
+  const secBrutal = document.getElementById('sec-brutal') as HTMLElement;
 
   function runSearch() {
     const term = search.value.toLowerCase().trim();
@@ -1484,6 +1561,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
       secStandings.hidden = false;
       secLeaders.hidden = false;
       secFallen.hidden = false;
+      secBrutal.hidden = false;
       secRoster.hidden = false;
       renderMyMatch();
       return;
@@ -1509,6 +1587,7 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     secStandings.hidden = true;
     secLeaders.hidden = true;
     secFallen.hidden = true;
+    secBrutal.hidden = true;
     secRoster.hidden = true;
     document.getElementById('mi-partido')!.hidden = true;
     paintList();
@@ -1541,27 +1620,37 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
     const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
     if (li) openDetail(li.dataset.open!);
   });
+  document.getElementById('brutal-body')!.addEventListener('click', (e) => {
+    const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
+    if (li) openDetail(li.dataset.open!);
+  });
   document.getElementById('fallen-body')!.addEventListener('click', (e) => {
     const li = (e.target as HTMLElement).closest<HTMLElement>('li[data-open]');
     if (li) openDetail(li.dataset.open!);
   });
 
-  // Salón de los caídos: colapsable (cerrado por defecto)
-  const fallenToggle = document.getElementById('fallen-toggle')!;
-  const fallenBody = document.getElementById('fallen-body')!;
-  const toggleFallen = () => {
-    const open = fallenBody.hidden;
-    fallenBody.hidden = !open;
-    fallenToggle.setAttribute('aria-expanded', String(open));
-    fallenToggle.classList.toggle('open', open);
-  };
-  fallenToggle.addEventListener('click', toggleFallen);
-  fallenToggle.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      toggleFallen();
-    }
-  });
+  // Secciones colapsables (Líderes abierto, Salón de los caídos y Brutalistas cerrados)
+  function makeCollapsible(toggleId: string, bodyId: string) {
+    const toggle = document.getElementById(toggleId);
+    const body = document.getElementById(bodyId);
+    if (!toggle || !body) return;
+    const flip = () => {
+      const open = body.hidden;
+      body.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.classList.toggle('open', open);
+    };
+    toggle.addEventListener('click', flip);
+    toggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        flip();
+      }
+    });
+  }
+  makeCollapsible('leaders-toggle', 'leaders-body');
+  makeCollapsible('fallen-toggle', 'fallen-body');
+  makeCollapsible('brutal-toggle', 'brutal-body');
 
   function openFromHash() {
     const h = decodeURIComponent((location.hash || '').slice(1));
@@ -1572,14 +1661,18 @@ const fixtures = roundsData[roundsData.length - 1].fixtures;
 
   async function load() {
     if (!supabase) return;
-    const [coachesRes, matchesRes] = await Promise.all([
+    const [coachesRes, matchesRes, fsRes] = await Promise.all([
       supabase.from('coaches').select('id, real_name, whatsapp, notes, updated_at'),
       supabase
         .from('matches')
         .select(
-          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, comp_home, comp_away, mvp_home, mvp_away, played_at, fumbbl_match_id, casualties, note, updated_at',
+          'id, round, home_id, away_id, home_team, away_team, scheduled_at, td_home, td_away, cas_home, cas_away, comp_home, comp_away, mvp_home, mvp_away, played_at, fumbbl_match_id, casualties, bashers, note, updated_at',
         ),
+      supabase.from('fumbbl_standings').select('*'),
     ]);
+    if (!fsRes.error) {
+      fumbblStandings = (fsRes.data ?? []) as FStand[];
+    }
 
     if (coachesRes.error) {
       banner.hidden = false;

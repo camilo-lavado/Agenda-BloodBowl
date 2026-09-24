@@ -1468,3 +1468,128 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
     transition-duration: .001ms !important;
   }
 }
+
+/* ---------- Iconos Lucide ---------- */
+.ico {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -.17em;
+  flex: none;
+  stroke: currentColor;
+}
+.ico-race { width: 1.25em; height: 1.25em; color: var(--bronze); }
+.ico-dead { color: var(--err); }
+.ico-hurt { color: var(--partial); }
+.chev .ico { width: 1em; height: 1em; transition: transform .2s ease; }
+.collapsible.open .chev .ico { transform: rotate(90deg); }
+.rc-nav .ico, .d-close .ico, .m-close .ico { width: 1.15em; height: 1.15em; }
+.leader-title .ico, .fchip .ico { width: 1em; height: 1em; }
+
+/* ---------- Fondo: cancha de fútbol americano ---------- */
+:root {
+  --turf-a: #2f7d3a;
+  --turf-b: #297234;
+  --turf-line: rgba(255, 255, 255, .55);
+  --turf-shade: rgba(0, 30, 0, .28);
+  --ez: rgba(138, 31, 31, .55);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --turf-a: #17381d;
+    --turf-b: #133018;
+    --turf-line: rgba(255, 255, 255, .22);
+    --turf-shade: rgba(0, 0, 0, .5);
+    --ez: rgba(210, 75, 75, .35);
+  }
+}
+
+body {
+  background:
+    /* zona de anotación superior */
+    linear-gradient(to bottom, var(--ez), transparent 220px),
+    /* marcas de yarda cada 10% con línea blanca */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(10vh - 3px),
+      var(--turf-line) calc(10vh - 3px) 10vh
+    ),
+    /* franjas de césped alternadas */
+    repeating-linear-gradient(
+      to bottom,
+      var(--turf-a) 0 10vh,
+      var(--turf-b) 10vh 20vh
+    );
+  background-attachment: fixed;
+}
+
+/* hash marks laterales + viñeta */
+body::before {
+  opacity: 1;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(2vh - 2px),
+      var(--turf-line) calc(2vh - 2px) 2vh
+    ),
+    radial-gradient(ellipse at center, transparent 45%, var(--turf-shade) 100%);
+  background-size: 14px 100%, 100% 100%;
+  background-position: 6% 0, 0 0;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* luz de estadio que barre la cancha */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -20% -40%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, .10) 50%,
+    transparent 60%
+  );
+  animation: floodlight 14s ease-in-out infinite alternate;
+}
+@keyframes floodlight {
+  from { transform: translateX(-25%); }
+  to   { transform: translateX(25%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; }
+}
+@media (max-width: 600px) {
+  body { background-attachment: scroll; }
+  body::before, body::after { position: fixed; }
+  body::before { background-size: 10px 100%, 100% 100%; background-position: 3% 0, 0 0; }
+}
+
+/* Paneles legibles sobre la cancha */
+.site-head {
+  margin-top: 14px;
+  padding: 26px clamp(16px, 4vw, 28px) 22px;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.section > h2 {
+  padding: 8px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+.section > h2::after { display: none; }
+.section > h2 .count { margin-left: auto; }
+.legend, .results-empty {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+}
+.toolbar, .banner {
+  background: var(--card);
+}

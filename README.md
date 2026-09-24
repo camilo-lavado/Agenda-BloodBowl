@@ -178,3 +178,11 @@ automation/
   run-sync.ps1          envoltorio para la tarea programada (con log)
   .env                  claves de Supabase para el script (no se sube)
 ```
+
+## Novedades: iconos, brutalistas y clasificación de FUMBBL
+
+- Iconos Lucide (`src/lib/icons.ts`) en lugar de emojis; Líderes muestra el top 5 y es colapsable.
+- «Brutalistas y asesinos»: bajas causadas por jugador y muertes causadas por equipo.
+- La clasificación se copia de la tabla «Tournament Members» de FUMBBL (si no hay datos, se calcula localmente).
+- **Requiere ejecutar `supabase/fumbbl-more.sql`** en el SQL Editor y luego correr el sincronizador.
+- Fondo de cancha de fútbol americano (CSS puro, respeta `prefers-reduced-motion`).

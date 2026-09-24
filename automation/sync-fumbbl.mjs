@@ -192,6 +192,21 @@ async function fetchMatchDetails(page, matchId, homeId, awayId) {
         }
         return out;
       };
+      // Jugadores que causaron bajas (celda .cas de cada fila de jugador).
+      const bashersOf = (side, teamId) => {
+        const container = document.querySelector(`.performancecontainer.${side}`);
+        if (!container || !teamId) return [];
+        const out = [];
+        for (const row of container.querySelectorAll('.player')) {
+          if (row.classList.contains('foot') || row.classList.contains('head')) continue;
+          const txt = row.querySelector('.cas')?.textContent.trim();
+          const n = txt && txt !== '-' ? Number(txt) : 0;
+          if (n > 0) {
+            out.push({ team_id: teamId, player: row.querySelector('.name')?.textContent.trim() || '?', cas: n });
+          }
+        }
+        return out;
+      };
       const timeEl = [...document.querySelectorAll('.time')].find((e) =>
         /Match recorded on/i.test(e.textContent || ''),
       );
@@ -208,6 +223,7 @@ async function fetchMatchDetails(page, matchId, homeId, awayId) {
         mvp_home: mvpOf('home'),
         mvp_away: mvpOf('away'),
         casualties: [...casualtiesOf('home', homeId), ...casualtiesOf('away', awayId)],
+        bashers: [...bashersOf('home', homeId), ...bashersOf('away', awayId)],
         played_at,
       };
     },
@@ -260,9 +276,66 @@ function ensureRoundInSchedule(key, label, pairs) {
 }
 
 // -------- Supabase --------
+// -------- FUMBBL: clasificación oficial (Tournament Members) --------
+// Se copia tal cual para no depender de recalcularla (FUMBBL cuenta las
+// bajas con otra definición y los totales no coinciden).
+async function fetchStandings(page) {
+  return page.evaluate(() => {
+    const h = [...document.querySelectorAll('.heading')].find((e) =>
+      /Tournament Members/i.test(e.textContent || ''),
+    );
+    const box = h?.nextElementSibling;
+    if (!box) return [];
+    const pair = (t) => {
+      const m = (t || '').match(/(-?\d+)\s*\/\s*(-?\d+)/);
+      return m ? [Number(m[1]), Number(m[2])] : [null, null];
+    };
+    const rows = [];
+    for (const tr of box.querySelectorAll('tr')) {
+      const cells = [...tr.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim());
+      const teamA = tr.querySelector('a[href*="/p/team"]');
+      if (!teamA) continue;
+      // Tras equipo y coach: PJ, V/E/D, TD, Cas, puntaje, delta (en ese orden)
+      const rest = cells.filter((_, i) => i >= 0);
+      const wdl = rest.find((t) => /^\d+\s*\/\s*\d+\s*\/\s*\d+$/.test(t));
+      const idx = rest.indexOf(wdl);
+      if (!wdl) continue;
+      const [w, d, l] = wdl.split('/').map((x) => Number(x.trim()));
+      const [tdf, tda] = pair(rest[idx + 1]);
+      const [casf, casa] = pair(rest[idx + 2]);
+      rows.push({
+        team: teamA.textContent.trim(),
+        games: Number(rest[idx - 1]),
+        wins: w, draws: d, losses: l,
+        td_for: tdf, td_against: tda,
+        cas_for: casf, cas_against: casa,
+        score: parseInt((rest[idx + 3] || '').replace(/[^\d-]/g, ''), 10),
+        score_delta: parseInt((rest[idx + 4] || '').replace(/[^\d-]/g, ''), 10),
+        raw: cells,
+      });
+    }
+    return rows;
+  });
+}
+
+async function supabaseUpsertStandings(rows) {
+  if (!rows.length) return;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/fumbbl_standings?on_conflict=team_id`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) throw new Error(`Supabase standings ${res.status}: ${await res.text()}`);
+}
+
 async function supabaseGetExisting() {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,comp_home,comp_away,mvp_home,mvp_away,played_at,fumbbl_match_id,casualties`,
+    `${SUPABASE_URL}/rest/v1/matches?select=id,td_home,td_away,cas_home,cas_away,comp_home,comp_away,mvp_home,mvp_away,played_at,fumbbl_match_id,casualties,bashers`,
     { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
   );
   if (!res.ok) throw new Error(`Supabase GET falló: ${res.status} ${await res.text()}`);
@@ -320,6 +393,26 @@ async function main() {
     scraped = await fetchSchedule(page);
     if (!scraped.length) throw new Error('No se extrajo ninguna ronda del calendario.');
 
+    // Clasificación oficial (la página del torneo sigue abierta)
+    try {
+      const st = await fetchStandings(page);
+      const stRows = [];
+      st.forEach((r, i) => {
+        const id = resolveTeamId(r.team, nameToId);
+        if (!id) return console.warn(`  clasificación: equipo sin mapear "${r.team}"`);
+        const { team, raw, ...rest } = r;
+        stRows.push({ team_id: id, position: i + 1, ...rest, updated_at: new Date().toISOString() });
+      });
+      if (stRows.length) {
+        await supabaseUpsertStandings(stRows);
+        console.log(`✅ Clasificación FUMBBL actualizada: ${stRows.length} equipos`);
+      } else {
+        console.warn('  clasificación: no se leyeron filas', JSON.stringify(st[0]?.raw ?? null));
+      }
+    } catch (err) {
+      console.warn('  clasificación falló:', err.message);
+    }
+
     const existing = await supabaseGetExisting();
     const matchPayloads = [];
     let scheduleChanged = false;
@@ -352,6 +445,7 @@ async function main() {
           mvp_home: null,
           mvp_away: null,
           casualties: null,
+          bashers: null,
           played_at: null,
         };
         if (m.matchId) {
@@ -377,7 +471,9 @@ async function main() {
           (details.mvp_away != null && prev.mvp_away !== details.mvp_away) ||
           (details.played_at != null && prev.played_at !== details.played_at) ||
           (details.casualties != null &&
-            JSON.stringify(prev.casualties ?? []) !== JSON.stringify(details.casualties));
+            JSON.stringify(prev.casualties ?? []) !== JSON.stringify(details.casualties)) ||
+          (details.bashers != null &&
+            JSON.stringify(prev.bashers ?? []) !== JSON.stringify(details.bashers));
 
         if (changed) {
           const payload = {
@@ -400,6 +496,7 @@ async function main() {
           if (details.mvp_away != null) payload.mvp_away = details.mvp_away;
           if (details.played_at != null) payload.played_at = details.played_at;
           if (details.casualties != null) payload.casualties = details.casualties;
+          if (details.bashers != null) payload.bashers = details.bashers;
           matchPayloads.push(payload);
         }
       }
