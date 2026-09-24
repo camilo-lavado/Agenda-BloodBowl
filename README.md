@@ -80,9 +80,43 @@ puede subir de versión (`tb6-v2`, …) para forzar la limpieza.
 
 ## Cambiar de ronda
 
-Edita [`src/data/schedule.ts`](src/data/schedule.ts): actualiza `currentRoundLabel`
-y la lista `currentRound` con los nuevos pares (usa los `id` de `coaches.ts`).
-Vuelve a desplegar. Los contactos guardados no se tocan.
+Normalmente no hace falta: el [sincronizador automático](#sincronizacion-automatica-con-fumbbl)
+añade la ronda nueva solo. Si alguna vez hay que hacerlo a mano: edita
+[`src/data/schedule.ts`](src/data/schedule.ts) y añade un bloque nuevo al
+final del array `rounds` (usa los `id` de `coaches.ts`); la última entrada es
+siempre la ronda "actual" que se ve al abrir la web. Las rondas anteriores se
+quedan ahí para verlas en el carrusel. Vuelve a desplegar. Los contactos
+guardados no se tocan.
+
+## Sincronización automática con FUMBBL
+
+Un workflow de GitHub Actions ([`.github/workflows/sync-fumbbl.yml`](.github/workflows/sync-fumbbl.yml))
+corre todos los días, lee el calendario del torneo en FUMBBL con un navegador
+real (la página tiene protección anti-bots que bloquea un `curl`/`fetch`
+normal) y:
+
+- Si hay una **ronda nueva** que no está en `schedule.ts`, la añade y hace commit + push (dispara el redeploy).
+- Sube a Supabase los **resultados (TD)** que falten o hayan cambiado, sin tocar nunca las bajas, la nota o la fecha
+  que alguien haya puesto a mano en la web (esos campos no se envían, así que Supabase no los pisa).
+
+El script vive en [`automation/`](automation), separado del sitio (Astro) para no meterle Playwright al build de la web.
+
+**Configuración (una vez):** en GitHub → tu repo → *Settings → Secrets and variables → Actions*,
+añade dos *repository secrets* con los mismos valores que tu `.env`:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+Con eso el workflow ya corre solo. También se puede lanzar a mano desde la pestaña
+**Actions → Sync FUMBBL → Run workflow** (por ejemplo, justo después de que salga una ronda,
+en vez de esperar a la corrida diaria).
+
+> **Bajas (Cas):** por ahora quedan fuera de la sincronización automática. La ficha de
+> partido de FUMBBL sí tiene un dato de bajas por equipo, pero no logré confirmar con
+> certeza qué representa exactamente (no cuadraba con partidos ya cargados a mano) — y
+> escribir un número de bajas equivocado sería peor que no escribir nada, porque afecta
+> el desempate de la clasificación. Las bajas se siguen cargando a mano en la ficha del
+> partido, como hasta ahora.
 
 ## Estructura
 

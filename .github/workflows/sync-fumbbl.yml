@@ -1,0 +1,53 @@
+name: Sync FUMBBL
+
+on:
+  schedule:
+    # Todos los días a las 12:00 UTC (~9:00 en Chile con horario de invierno,
+    # ~8:00 en verano). Sobra margen: cada ronda dura una semana. Ajusta la
+    # hora si quieres, o dispara el workflow a mano desde la pestaña Actions.
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-fumbbl
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias del sincronizador
+        working-directory: automation
+        run: npm install
+
+      - name: Instalar Chromium (Playwright)
+        working-directory: automation
+        run: npx playwright install --with-deps chromium
+
+      - name: Leer FUMBBL y actualizar Supabase / schedule.ts
+        working-directory: automation
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: npm run sync
+
+      - name: Commit si hay una ronda nueva
+        run: |
+          if git diff --quiet -- src/data/schedule.ts; then
+            echo "Sin cambios en schedule.ts"
+            exit 0
+          fi
+          git config user.name "fumbbl-sync-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/schedule.ts
+          git commit -m "Sync automático FUMBBL: nueva ronda"
+          git push

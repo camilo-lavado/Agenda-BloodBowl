@@ -1,0 +1,12 @@
+{
+  "name": "fumbbl-sync",
+  "type": "module",
+  "private": true,
+  "description": "Sincroniza rondas y resultados de FUMBBL con la web de Tasting Blood VI. Vive aparte del sitio (Astro) para no meterle Playwright al build.",
+  "scripts": {
+    "sync": "node sync-fumbbl.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}
