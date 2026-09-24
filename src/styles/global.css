@@ -1481,7 +1481,6 @@ dialog.detail[open] .d-box { animation: sheetIn .26s cubic-bezier(.2, .75, .25, 
 .ico-dead { color: var(--err); }
 .ico-hurt { color: var(--partial); }
 .chev .ico { width: 1em; height: 1em; transition: transform .2s ease; }
-.collapsible.open .chev .ico { transform: rotate(90deg); }
 .rc-nav .ico, .d-close .ico, .m-close .ico { width: 1.15em; height: 1.15em; }
 .leader-title .ico, .fchip .ico { width: 1em; height: 1em; }
 
@@ -1742,3 +1741,9 @@ button, .wa-btn { border-radius: 6px; }
 .toolbar { border: 1px solid var(--line-strong); }
 .standings thead th.c-pts { color: var(--gold); }
 .standings tbody tr:first-child .c-pos { color: var(--blood); }
+@media (prefers-color-scheme: dark) {
+  .progress-fill.full { background: var(--gold); }
+  .progress-track { background: rgba(255, 255, 255, .12); }
+}
+.section > h2 .chev { color: var(--gold); width: 18px; }
+.d-box { border-radius: 12px 12px 0 0; } @media (min-width: 640px) { .d-box { border-radius: 10px; } }
