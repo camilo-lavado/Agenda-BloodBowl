@@ -18,6 +18,9 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # Los secrets están guardados en el entorno "Production"
+    # (Settings -> Environments / Secrets and variables -> Actions).
+    environment: Production
     steps:
       - uses: actions/checkout@v4
 
@@ -36,8 +39,8 @@ jobs:
       - name: Leer FUMBBL y actualizar Supabase / schedule.ts
         working-directory: automation
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run sync
 
       - name: Commit si hay una ronda nueva

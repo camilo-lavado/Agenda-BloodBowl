@@ -104,10 +104,15 @@ normal) y:
 El script vive en [`automation/`](automation), separado del sitio (Astro) para no meterle Playwright al build de la web.
 
 **Configuración (una vez):** en GitHub → tu repo → *Settings → Secrets and variables → Actions*,
-añade dos *repository secrets* con los mismos valores que tu `.env`:
+añade dos secrets con los mismos valores que tu `.env`:
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
+- `PUBLIC_SUPABASE_URL`
+- `PUBLIC_SUPABASE_ANON_KEY`
+
+Da igual si los guardas como *Repository secrets* o dentro de un *Environment*
+(el workflow apunta al entorno `Production`); si usas otro nombre de entorno,
+ajusta la línea `environment:` en
+[`.github/workflows/sync-fumbbl.yml`](.github/workflows/sync-fumbbl.yml).
 
 Con eso el workflow ya corre solo. También se puede lanzar a mano desde la pestaña
 **Actions → Sync FUMBBL → Run workflow** (por ejemplo, justo después de que salga una ronda,
