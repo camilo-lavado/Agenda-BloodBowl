@@ -143,6 +143,34 @@ async function fetchSchedule(page) {
   });
 }
 
+// -------- Qué equipo es "local" en la PÁGINA del partido --------
+// OJO: en el calendario del torneo el orden de los equipos NO coincide con el
+// local/visitante de la página del partido (en 7 de 14 partidos del torneo
+// Tasting Blood VI estaba invertido). Los datos por lado (bajas, MVP, pases,
+// bajas por jugador) salen de la página, así que hay que saber qué equipo es
+// team1 (= local de la página). La API JSON lo dice y no requiere navegador.
+async function pageSides(matchId) {
+  try {
+    const res = await fetch(`${BASE_URL}/api/match/get/${matchId}`, {
+      headers: { 'User-Agent': 'tasting-blood-sync/1.0', Accept: 'application/json' },
+      signal: AbortSignal.timeout(20000),
+    });
+    const j = await res.json();
+    if (j && j.team1 && j.team2) return { home: j.team1.name, away: j.team2.name };
+  } catch {}
+  return null;
+}
+
+// Cambia local <-> visitante en los campos que dependen del lado de la página.
+function swapSides(d) {
+  const out = { ...d };
+  for (const k of ['cas', 'comp', 'mvp']) {
+    out[`${k}_home`] = d[`${k}_away`];
+    out[`${k}_away`] = d[`${k}_home`];
+  }
+  return out;
+}
+
 // -------- FUMBBL: detalle de un partido ya cerrado --------
 // "cas" en la fila TOTALS de la tabla de un equipo = bajas que HIZO ese
 // equipo en ese partido (no las que sufrió). "mvp"=1 en la fila de un
@@ -459,7 +487,15 @@ async function main() {
         };
         if (m.matchId) {
           try {
-            details = await fetchMatchDetails(page, m.matchId, homeId, awayId);
+            const sides = await pageSides(m.matchId);
+            const pageHomeId = sides ? resolveTeamId(sides.home, nameToId) : null;
+            if (pageHomeId !== homeId && pageHomeId !== awayId) {
+              // Sin certeza del lado no se guarda nada: mejor vacío que atribuido al equipo equivocado.
+              throw new Error(`no se pudo determinar el lado local de la página (API: ${sides ? sides.home : 'sin respuesta'})`);
+            }
+            const flip = pageHomeId === awayId;
+            details = await fetchMatchDetails(page, m.matchId, flip ? awayId : homeId, flip ? homeId : awayId);
+            if (flip) details = swapSides(details);
           } catch (err) {
             console.warn(`⚠️  No pude leer el detalle del partido ${m.matchId} (${m.home} vs ${m.away}): ${err.message}`);
           }
