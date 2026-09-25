@@ -186,3 +186,15 @@ automation/
 - La clasificación se copia de la tabla «Tournament Members» de FUMBBL (si no hay datos, se calcula localmente).
 - **Requiere ejecutar `supabase/fumbbl-more.sql`** en el SQL Editor y luego correr el sincronizador.
 - Fondo de cancha de fútbol americano (CSS puro, respeta `prefers-reduced-motion`).
+
+## Actualizaciones recientes
+
+- **Corrección de atribución por lado:** en el calendario del torneo el orden de los equipos no siempre coincide con
+  local/visitante de la página del partido (7 de 14 partidos invertidos). El sincronizador ahora consulta la API JSON de
+  FUMBBL (`match/get`) para saber qué equipo es local en la página y da vuelta los datos por lado (bajas, MVP, pases,
+  bajas por jugador y equipo de cada caído). Si no puede determinarlo, no guarda nada.
+- **Descubrimiento:** FUMBBL tiene una API JSON abierta (`https://fumbbl.com/api/...`) sin la protección anti-bots de las
+  páginas HTML. Este proyecto sigue usando el navegador automatizado para los datos que solo están en HTML (caídos con
+  nombre); una versión agnóstica y multi-torneo, basada en esa API, vive en el proyecto aparte **`fumbbl-hub`**.
+- Diferencia conocida: las «bajas» por partido de nuestra app cuentan solo las que dan puntos a un jugador (página del
+  partido); la clasificación oficial y la API cuentan todas, por eso pueden no coincidir.

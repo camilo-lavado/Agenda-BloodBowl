@@ -1,3 +1,5 @@
+> **Actualización:** este plan se retomó como un proyecto aparte y agnóstico (`fumbbl-hub`): API en Go con sincronizador, Swagger y pruebas. Este documento queda como antecedente.
+
 # Plan: de «Tasting Blood VI» a una app para cualquier torneo o liga de FUMBBL
 
 Estado: propuesta · Fecha: 2026-09-24 · Base: la app actual (Astro estático + Supabase + sincronizador)
