@@ -50,6 +50,19 @@ export const rounds: RoundDef[] = [
       ['necrotasting', 'goblins-sea-shanties'],
     ],
   },
+  {
+    key: 'r4',
+    label: 'Ronda 4',
+    pairs: [
+      ['les-chevaliers', 'defensores-de-ulthuan'],
+      ['red-corsairs', 'la-orden-del-santo-pernil'],
+      ['a-tut-voyage', 'olor-a-pescao'],
+      ['alianza-mafiosa', 'boumboumboum'],
+      ['desert-eagles', 'necrotasting'],
+      ['limari-zigurratz', 'caballeros-de-dol-amroth'],
+      ['dead-drunks', 'goblins-sea-shanties'],
+    ],
+  },
 ];
 
 export const currentRound = rounds[rounds.length - 1];
